@@ -1,0 +1,15 @@
+node_modules/
+dist/
+coverage/
+.git/
+.husky/
+.env
+.env.*
+.google-token.json
+**/*.test.ts
+**/*.spec.ts
+docs/
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+*.sqlite

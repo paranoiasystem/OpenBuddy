@@ -1,0 +1,50 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+*.tsbuildinfo
+
+# Test & coverage
+coverage/
+*.lcov
+
+# Environment secrets — NEVER commit
+.env
+.env.local
+.env.*.local
+
+# Claude Code personal overrides — gitignored by convention
+CLAUDE.local.md
+.claude/settings.local.json
+
+# SQLite databases (dev)
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+
+# Google OAuth2 token — contains refresh tokens, never commit
+.google-token.json
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# Editor artifacts
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Docker
+.docker/
+
+# Temporary files
+tmp/
+temp/

@@ -1,0 +1,45 @@
+version: '3.9'
+
+services:
+  openbuddy:
+    build:
+      context: .
+      target: runtime
+    container_name: openbuddy
+    hostname: openbuddy
+    env_file: .env
+    volumes:
+      - sqlite-data:/data
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+
+  cloudflare-tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflare-tunnel
+    hostname: cloudflare-tunnel
+    restart: unless-stopped
+    depends_on:
+      openbuddy:
+        condition: service_started
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+    network_mode: "host"
+    command: tunnel run
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./config/hosts:/etc/hosts
+    environment:
+      - "TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}"
+    healthcheck:
+      test: ["CMD", "cloudflared", "--version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  sqlite-data:
