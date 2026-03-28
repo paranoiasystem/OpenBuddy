@@ -1,6 +1,7 @@
 import type { IHandleMessage } from '@domain/ports/input/i-handle-message.js'
 import { logger } from '@shared/logger.js'
 import { MESSAGES } from '@shared/messages.js'
+import { formatForTelegramHtml } from '@shared/telegram-html.js'
 
 import type { BotContext } from '../bot-context.type.js'
 
@@ -32,19 +33,6 @@ export function createMessageHandler(handleMessage: IHandleMessage) {
       return
     }
 
-    await ctx.reply(sanitizeForTelegramHtml(result.value.reply), { parse_mode: 'HTML' })
+    await ctx.reply(formatForTelegramHtml(result.value.reply), { parse_mode: 'HTML' })
   }
-}
-
-// ─── Telegram HTML helpers ──────────────────────────────────────────────────
-
-const HTML_TAG_PATTERN = /<\/?(?:b|i|u|s|code|pre|a)\b/i
-
-/**
- * If the text already contains known Telegram HTML tags, pass through as-is.
- * Otherwise escape &, <, > so plain chat text renders safely in HTML mode.
- */
-function sanitizeForTelegramHtml(text: string): string {
-  if (HTML_TAG_PATTERN.test(text)) return text
-  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
