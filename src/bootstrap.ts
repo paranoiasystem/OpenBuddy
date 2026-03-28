@@ -68,12 +68,13 @@ export async function bootstrap(): Promise<BootstrapResult> {
   }
 
   // ─── SLANG orchestrator ───────────────────────────────────────────────────────
-  const tools = buildToolRegistry({ calendarGateway, emailGateway })
+  const tools = buildToolRegistry({ calendarGateway, emailGateway, timezone: config.TIMEZONE })
   const orchestrator = new SlangOrchestrator(
     {
       openRouterApiKey: config.OPENROUTER_API_KEY,
       siteUrl: 'https://github.com/openbuddy',
       appName: 'OpenBuddy',
+      timezone: config.TIMEZONE,
     },
     tools,
   )

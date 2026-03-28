@@ -37,6 +37,7 @@ type SlangOrchestratorConfig = {
   readonly openRouterApiKey: string
   readonly siteUrl?: string
   readonly appName?: string
+  readonly timezone: string
 }
 
 /**
@@ -217,6 +218,7 @@ export class SlangOrchestrator implements IMessageOrchestrator {
           year: 'numeric',
           month: 'long',
           day: 'numeric',
+          timeZone: this.config.timezone,
         }),
       },
       tools: this.tools,
@@ -298,6 +300,7 @@ export class SlangOrchestrator implements IMessageOrchestrator {
         calendar_provider: String(params['provider'] ?? 'google'),
         user_id: opts.userId,
         current_datetime: new Date().toISOString(),
+        timezone: this.config.timezone,
       },
       tools: this.tools,
     })

@@ -10,6 +10,7 @@ export type SlangToolRegistry = Record<string, SlangToolHandler>
 type ToolDependencies = {
   readonly calendarGateway: ICalendarGateway | undefined
   readonly emailGateway: IEmailGateway | undefined
+  readonly timezone: string
 }
 
 /**
@@ -18,9 +19,9 @@ type ToolDependencies = {
  */
 export function buildToolRegistry(deps: ToolDependencies): SlangToolRegistry {
   return {
-    get_current_datetime: getCurrentDatetime,
+    get_current_datetime: getCurrentDatetime(deps.timezone),
     list_calendar_events: listCalendarEvents(deps.calendarGateway),
-    create_calendar_event: createCalendarEvent(deps.calendarGateway),
+    create_calendar_event: createCalendarEvent(deps.calendarGateway, deps.timezone),
     list_emails: listEmails(deps.emailGateway),
     search_emails: searchEmails(deps.emailGateway),
     send_email: sendEmail(deps.emailGateway),
@@ -29,17 +30,22 @@ export function buildToolRegistry(deps: ToolDependencies): SlangToolRegistry {
 
 // ─── Tool implementations ────────────────────────────────────────────────────
 
-function getCurrentDatetime(_args: Record<string, unknown>): Promise<string> {
-  const now = new Date()
-  return Promise.resolve(
-    JSON.stringify({
-      iso: now.toISOString(),
-      readable: now.toLocaleString('it-IT', { timeZone: 'Europe/Rome' }),
-      date: now.toLocaleDateString('it-IT'),
-      time: now.toLocaleTimeString('it-IT'),
-      dayOfWeek: now.toLocaleDateString('it-IT', { weekday: 'long' }),
-    }),
-  )
+function getCurrentDatetime(timezone: string) {
+  return (_args: Record<string, unknown>): Promise<string> => {
+    const now = new Date()
+    const utcOffset = getTimezoneOffset(now, timezone)
+    return Promise.resolve(
+      JSON.stringify({
+        iso: now.toISOString(),
+        readable: now.toLocaleString('it-IT', { timeZone: timezone }),
+        date: now.toLocaleDateString('it-IT', { timeZone: timezone }),
+        time: now.toLocaleTimeString('it-IT', { timeZone: timezone }),
+        dayOfWeek: now.toLocaleDateString('it-IT', { weekday: 'long', timeZone: timezone }),
+        timezone,
+        utc_offset: utcOffset,
+      }),
+    )
+  }
 }
 
 function listCalendarEvents(gateway: ICalendarGateway | undefined) {
@@ -57,7 +63,7 @@ function listCalendarEvents(gateway: ICalendarGateway | undefined) {
   }
 }
 
-function createCalendarEvent(gateway: ICalendarGateway | undefined) {
+function createCalendarEvent(gateway: ICalendarGateway | undefined, timezone: string) {
   return async (args: Record<string, unknown>): Promise<string> => {
     if (!gateway) {
       return JSON.stringify({ configured: false, message: 'Google Calendar not configured.' })
@@ -78,8 +84,8 @@ function createCalendarEvent(gateway: ICalendarGateway | undefined) {
       })
     }
 
-    const startAt = new Date(String(args['start_at']))
-    const endAt = new Date(String(args['end_at']))
+    const startAt = new Date(ensureTimezoneOffset(String(args['start_at']), timezone))
+    const endAt = new Date(ensureTimezoneOffset(String(args['end_at']), timezone))
 
     if (isNaN(startAt.getTime()) || isNaN(endAt.getTime())) {
       return JSON.stringify({ success: false, error: 'Invalid date format. Use ISO 8601.' })
@@ -178,4 +184,70 @@ function sendEmail(gateway: IEmailGateway | undefined) {
     }
     return JSON.stringify({ success: true, message: 'Email sent successfully.' })
   }
+}
+
+// ─── Timezone helpers ─────────────────────────────────────────────────────────
+
+/** Computes the UTC offset string (e.g. "+02:00") for a given date and IANA timezone. */
+export function getTimezoneOffset(date: Date, timezone: string): string {
+  const utcParts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'UTC',
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: false,
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+  }).formatToParts(date)
+
+  const localParts = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: false,
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+  }).formatToParts(date)
+
+  const get = (parts: Intl.DateTimeFormatPart[], type: string): number =>
+    Number(parts.find((p) => p.type === type)?.value ?? 0)
+
+  const utcMinutes =
+    Date.UTC(
+      get(utcParts, 'year'),
+      get(utcParts, 'month') - 1,
+      get(utcParts, 'day'),
+      get(utcParts, 'hour'),
+      get(utcParts, 'minute'),
+    ) / 60000
+  const localMinutes =
+    Date.UTC(
+      get(localParts, 'year'),
+      get(localParts, 'month') - 1,
+      get(localParts, 'day'),
+      get(localParts, 'hour'),
+      get(localParts, 'minute'),
+    ) / 60000
+
+  const offsetMinutes = localMinutes - utcMinutes
+  const sign = offsetMinutes >= 0 ? '+' : '-'
+  const absMinutes = Math.abs(offsetMinutes)
+  const h = String(Math.floor(absMinutes / 60)).padStart(2, '0')
+  const m = String(absMinutes % 60).padStart(2, '0')
+  return `${sign}${h}:${m}`
+}
+
+/**
+ * If an ISO datetime string lacks a timezone offset (naive), appends the
+ * configured timezone offset so that `new Date()` interprets it correctly.
+ */
+function ensureTimezoneOffset(isoString: string, timezone: string): string {
+  const trimmed = isoString.trim()
+  if (/[Zz]$/.test(trimmed) || /[+-]\d{2}:\d{2}$/.test(trimmed)) {
+    return trimmed
+  }
+  const refDate = new Date(trimmed + 'Z')
+  if (isNaN(refDate.getTime())) return trimmed
+  return trimmed + getTimezoneOffset(refDate, timezone)
 }
