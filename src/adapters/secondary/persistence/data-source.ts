@@ -15,7 +15,8 @@ export async function createDataSource(dbPath: string): Promise<DataSource> {
     entities: [UserEntity, ConversationEntity, ScheduledTaskEntity, GoogleTokenEntity],
     migrations: ['dist/adapters/secondary/persistence/migrations/*.js'],
     synchronize: process.env['NODE_ENV'] !== 'production',
-    logging: process.env['NODE_ENV'] === 'development',
+    logging:
+      process.env['NODE_ENV'] === 'development' ? ['error', 'warn', 'schema', 'migration'] : false,
   })
 
   await dataSource.initialize()
