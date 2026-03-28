@@ -10,6 +10,7 @@ flow "email-write" {
       tone: params.tone_preference
     ) -> @Reviewer
     output: { subject: "string", body: "string", to: "string", tone: "string" }
+    commit
   }
 
   agent Reviewer {
