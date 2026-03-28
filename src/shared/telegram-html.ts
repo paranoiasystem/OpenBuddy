@@ -17,15 +17,23 @@ export function formatForTelegramHtml(text: string): string {
 
   let result = text
 
-  // Code blocks (``` ... ```) → <pre>
+  // Extract code blocks first and replace with placeholders to protect them
+  const codeBlocks: string[] = []
   result = result.replace(/```(?:\w*)\n?([\s\S]*?)```/g, (_match, code: string) => {
-    return `<pre>${escapeHtml(code.trim())}</pre>`
+    const idx = codeBlocks.length
+    codeBlocks.push(`<pre>${escapeHtml(code.trim())}</pre>`)
+    return `\x00CB${idx}\x00`
   })
 
-  // Inline code (` ... `) → <code>
+  const inlineCodes: string[] = []
   result = result.replace(/`([^`\n]+)`/g, (_match, code: string) => {
-    return `<code>${escapeHtml(code)}</code>`
+    const idx = inlineCodes.length
+    inlineCodes.push(`<code>${escapeHtml(code)}</code>`)
+    return `\x00IC${idx}\x00`
   })
+
+  // Escape &, <, > in the remaining text BEFORE adding HTML tags
+  result = escapeHtml(result)
 
   // Bold (**text** or __text__) → <b>
   result = result.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
@@ -38,11 +46,16 @@ export function formatForTelegramHtml(text: string): string {
   // Headings (# text) → <b>text</b>
   result = result.replace(/^#{1,6}\s+(.+)$/gm, '<b>$1</b>')
 
-  // Blockquotes (> text) → <blockquote>text</blockquote>
-  result = result.replace(/^>\s+(.+)$/gm, '<blockquote>$1</blockquote>')
+  // Blockquotes (&gt; text) → <blockquote>text</blockquote> (& is already escaped)
+  result = result.replace(/^&gt;\s+(.+)$/gm, '<blockquote>$1</blockquote>')
 
-  // Escape remaining &, <, > that are NOT inside tags we just created
-  result = escapeOutsideTags(result)
+  // Restore code blocks and inline codes
+  for (let i = 0; i < codeBlocks.length; i++) {
+    result = result.replace(`\x00CB${i}\x00`, codeBlocks[i] ?? '')
+  }
+  for (let i = 0; i < inlineCodes.length; i++) {
+    result = result.replace(`\x00IC${i}\x00`, inlineCodes[i] ?? '')
+  }
 
   return result.trim()
 }
@@ -57,24 +70,4 @@ function stripUnsupportedHtmlTags(html: string): string {
   return html.replace(/<\/?([^>\s]+)([^>]*)>/g, (match, tag: string) => {
     return TELEGRAM_ALLOWED_TAGS.test(tag) ? match : ''
   })
-}
-
-/**
- * Escapes &, <, > characters that appear outside of HTML tags.
- * Preserves tags like <b>, <i>, <code>, <pre>, <a href="...">, <blockquote>.
- */
-function escapeOutsideTags(text: string): string {
-  const parts = text.split(/(<\/?[^>]+>)/g)
-  return parts
-    .map((part, i) => {
-      // Odd indices are tag matches — pass through
-      if (i % 2 === 1) return part
-      // Even indices are text — escape
-      return part.replace(/&/g, '&amp;').replace(/(?<!&amp;|&lt;|&gt;)</g, (ch) => {
-        if (ch === '<') return '&lt;'
-        if (ch === '>') return '&gt;'
-        return ch
-      })
-    })
-    .join('')
 }
