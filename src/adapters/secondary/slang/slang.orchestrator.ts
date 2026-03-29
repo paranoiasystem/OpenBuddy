@@ -251,21 +251,25 @@ export class SlangOrchestrator implements IMessageOrchestrator {
     }
 
     const raw = state.outputs[0]
-    let output: { preview?: string; subject?: string; body?: string }
+    let output: { sent?: boolean; subject?: string; to?: string; message?: string }
     if (typeof raw === 'object' && raw !== null) {
-      output = raw as { preview?: string; subject?: string; body?: string }
+      output = raw as typeof output
     } else if (typeof raw === 'string') {
       const parsed = tryParseJson(raw)
-      output =
-        typeof parsed === 'object' && parsed !== null
-          ? (parsed as { preview?: string; subject?: string; body?: string })
-          : {}
+      output = typeof parsed === 'object' && parsed !== null ? (parsed as typeof output) : {}
     } else {
       output = {}
     }
 
-    const preview = output.preview ?? `📧 <b>${output.subject ?? ''}</b>\n\n${output.body ?? ''}`
-    return ok(stripSlangMeta(preview))
+    if (output.sent) {
+      const confirmation =
+        output.message ??
+        `✅ Email inviata a ${output.to ?? ''} con oggetto "${output.subject ?? ''}".`
+      return ok(stripSlangMeta(confirmation))
+    }
+
+    const fallback = output.message ?? 'Non sono riuscito a inviare la mail. Riprova tra poco.'
+    return ok(stripSlangMeta(fallback))
   }
 
   private async runEmailRead(

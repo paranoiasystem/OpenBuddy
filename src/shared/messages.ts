@@ -17,7 +17,7 @@ export const MESSAGES = {
     '✅ <b>Autenticazione completata!</b>\n\nOra puoi usare Google Calendar e Gmail. Prova con:\n' +
     '• "Quali sono i miei eventi di oggi?"\n• "Scrivi una mail a..."',
   AUTH_ALREADY_DONE:
-    '✅ Sei già autenticato con Google. Se vuoi ripetere il processo usa /auth per rigenerare il link.',
+    '✅ Sei già autenticato con Google, ma puoi ripetere il processo per rigenerare il token.',
   AUTH_NOT_CONFIGURED:
     "⚠️ Le credenziali Google non sono configurate su questo bot. Contatta l'amministratore.",
   HELP_TEXT:

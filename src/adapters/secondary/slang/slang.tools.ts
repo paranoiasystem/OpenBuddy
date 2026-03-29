@@ -33,7 +33,6 @@ export function buildToolRegistry(deps: ToolDependencies): SlangToolRegistry {
 function getCurrentDatetime(timezone: string) {
   return (_args: Record<string, unknown>): Promise<string> => {
     const now = new Date()
-    const utcOffset = getTimezoneOffset(now, timezone)
     return Promise.resolve(
       JSON.stringify({
         iso: now.toISOString(),
@@ -42,7 +41,6 @@ function getCurrentDatetime(timezone: string) {
         time: now.toLocaleTimeString('it-IT', { timeZone: timezone }),
         dayOfWeek: now.toLocaleDateString('it-IT', { weekday: 'long', timeZone: timezone }),
         timezone,
-        utc_offset: utcOffset,
       }),
     )
   }
