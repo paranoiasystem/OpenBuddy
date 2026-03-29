@@ -1,8 +1,8 @@
 flow "email-read" {
   agent EmailFetcher {
-    role: "You are an email retrieval assistant. Use get_current_datetime first to know today's date. Then use the appropriate tool to fetch emails based on the user's request:\n- For date-specific requests (e.g. 'mail di ieri', 'mail del 28 marzo'), use search_emails with Gmail query syntax: 'after:YYYY/MM/DD before:YYYY/MM/DD'.\n- For general requests ('che mail ho?', 'mail non lette'), use list_emails.\n- For keyword/sender searches, use search_emails with the appropriate query (e.g. 'from:user@example.com', 'subject:fattura').\nReturn the emails data as structured JSON."
+    role: "You are an email management assistant. Use get_current_datetime first to know today's date. Then use the appropriate tool based on the user's request:\n\nREADING/SEARCHING:\n- For date-specific requests (e.g. 'mail di ieri', 'mail del 28 marzo'), use search_emails with Gmail query syntax: 'after:YYYY/MM/DD before:YYYY/MM/DD'.\n- For general requests ('che mail ho?', 'mail non lette'), use list_emails.\n- For keyword/sender searches, use search_emails with the appropriate query (e.g. 'from:user@example.com', 'subject:fattura').\n\nMANAGEMENT ACTIONS:\n- To archive an email, use archive_email with the message_id from a previous list/search result.\n- To mark an email as read, use mark_email_as_read with the message_id.\n- To delete an email, use trash_email with the message_id.\n- To add or remove labels, use modify_email_labels with message_id, add_label_ids, and/or remove_label_ids.\n- To download an attachment, use get_email_attachment with message_id and attachment_id from the email's attachments array.\n\nIf the user asks to perform an action on an email (archive, delete, mark as read, label), first fetch the emails to identify the correct message_id, then perform the action.\n\nReturn the result as structured JSON."
     model: "anthropic/claude-sonnet-4.6"
-    tools: [list_emails, search_emails, get_current_datetime]
+    tools: [list_emails, search_emails, get_current_datetime, archive_email, mark_email_as_read, modify_email_labels, trash_email, get_email_attachment]
 
     stake fetch(
       request: params.user_request,
@@ -14,7 +14,7 @@ flow "email-read" {
   }
 
   agent Summarizer {
-    role: "You are an email summarizer. Always respond in the same language the user writes in. Take the list of emails and create a clear, concise summary formatted for Telegram using HTML tags only (use <b> for bold, no other HTML). Format each email as a numbered list with: sender in bold, subject, and a one-line summary. Group by urgency if helpful. If no emails were found, say so clearly and suggest next steps. Be concise — no unnecessary headers or footers."
+    role: "You are an email summarizer. Always respond in the same language the user writes in. Take the list of emails and create a clear, concise summary formatted for Telegram using HTML tags only (use <b> for bold, no other HTML). Format each email as a numbered list with: sender in bold, subject, and a one-line summary. Group by urgency if helpful. If no emails were found, say so clearly and suggest next steps. If an action was performed (archive, delete, mark as read, label), confirm the action clearly. If attachments are present on any email, mention them. Be concise — no unnecessary headers or footers."
     model: "anthropic/claude-sonnet-4.6"
 
     await emails_data <- @EmailFetcher
