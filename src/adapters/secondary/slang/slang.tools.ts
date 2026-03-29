@@ -2,6 +2,17 @@ import type { ICalendarGateway } from '@domain/ports/output/i-calendar-gateway.j
 import type { IEmailGateway } from '@domain/ports/output/i-email-gateway.js'
 import { logger } from '@shared/logger.js'
 
+import {
+  archiveEmail,
+  getEmailAttachment,
+  listEmails,
+  markEmailAsRead,
+  modifyEmailLabels,
+  searchEmails,
+  sendEmail,
+  trashEmail,
+} from './slang.email-tools.js'
+
 /** Shape of a SLANG tool handler: receives args, returns a string result. */
 export type SlangToolHandler = (args: Record<string, unknown>) => Promise<string>
 
@@ -25,6 +36,11 @@ export function buildToolRegistry(deps: ToolDependencies): SlangToolRegistry {
     list_emails: listEmails(deps.emailGateway),
     search_emails: searchEmails(deps.emailGateway),
     send_email: sendEmail(deps.emailGateway),
+    archive_email: archiveEmail(deps.emailGateway),
+    modify_email_labels: modifyEmailLabels(deps.emailGateway),
+    mark_email_as_read: markEmailAsRead(deps.emailGateway),
+    trash_email: trashEmail(deps.emailGateway),
+    get_email_attachment: getEmailAttachment(deps.emailGateway),
   }
 }
 
@@ -104,83 +120,6 @@ function createCalendarEvent(gateway: ICalendarGateway | undefined, timezone: st
       return JSON.stringify({ success: false, error: result.error.message })
     }
     return JSON.stringify({ success: true, event: result.value })
-  }
-}
-
-function listEmails(gateway: IEmailGateway | undefined) {
-  return async (args: Record<string, unknown>): Promise<string> => {
-    if (!gateway) {
-      return JSON.stringify({
-        configured: false,
-        message: 'Gmail not configured. Run /auth to authenticate.',
-        emails: [],
-        unread_count: 0,
-      })
-    }
-    const maxResults = typeof args['max_results'] === 'number' ? args['max_results'] : 10
-    const labelIds = Array.isArray(args['label_ids']) ? (args['label_ids'] as string[]) : undefined
-
-    const result = await gateway.listMessages({
-      maxResults,
-      ...(labelIds !== undefined ? { labelIds } : {}),
-    })
-    if (result.isErr()) {
-      logger.warn({ error: result.error.code }, 'list_emails tool error')
-      return JSON.stringify({ configured: true, error: result.error.message, emails: [] })
-    }
-    return JSON.stringify({
-      configured: true,
-      emails: result.value,
-      unread_count: result.value.filter((m) => m.isUnread).length,
-    })
-  }
-}
-
-function searchEmails(gateway: IEmailGateway | undefined) {
-  return async (args: Record<string, unknown>): Promise<string> => {
-    if (!gateway) {
-      return JSON.stringify({
-        configured: false,
-        message: 'Gmail not configured. Run /auth to authenticate.',
-        emails: [],
-      })
-    }
-    const query = String(args['query'] ?? '')
-    const maxResults = typeof args['max_results'] === 'number' ? args['max_results'] : 10
-
-    const result = await gateway.searchMessages(query, maxResults)
-    if (result.isErr()) {
-      logger.warn({ error: result.error.code }, 'search_emails tool error')
-      return JSON.stringify({ configured: true, error: result.error.message, emails: [] })
-    }
-    return JSON.stringify({ configured: true, emails: result.value })
-  }
-}
-
-function sendEmail(gateway: IEmailGateway | undefined) {
-  return async (args: Record<string, unknown>): Promise<string> => {
-    if (!gateway) {
-      return JSON.stringify({
-        configured: false,
-        message: 'Gmail not configured. Run /auth to authenticate.',
-      })
-    }
-    const to = Array.isArray(args['to']) ? (args['to'] as string[]) : [String(args['to'] ?? '')]
-    const subject = String(args['subject'] ?? '')
-    const body = String(args['body'] ?? '')
-    const cc = Array.isArray(args['cc']) ? (args['cc'] as string[]) : undefined
-
-    const result = await gateway.sendDraft({
-      to,
-      subject,
-      body,
-      ...(cc !== undefined ? { cc } : {}),
-    })
-    if (result.isErr()) {
-      logger.warn({ error: result.error.code }, 'send_email tool error')
-      return JSON.stringify({ success: false, error: result.error.message })
-    }
-    return JSON.stringify({ success: true, message: 'Email sent successfully.' })
   }
 }
 

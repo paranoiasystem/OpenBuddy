@@ -17,6 +17,5 @@ export const OPENROUTER_MODELS = {
 /** Google OAuth2 scopes required by the bot. */
 export const GOOGLE_SCOPES = [
   'https://www.googleapis.com/auth/calendar',
-  'https://www.googleapis.com/auth/gmail.compose',
-  'https://www.googleapis.com/auth/gmail.readonly',
+  'https://www.googleapis.com/auth/gmail.modify',
 ] as const
