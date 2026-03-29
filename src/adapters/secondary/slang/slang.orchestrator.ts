@@ -8,6 +8,7 @@ import type {
   MessageOrchestratorInput,
 } from '@domain/ports/output/i-message-orchestrator.js'
 import { logger } from '@shared/logger.js'
+import { MESSAGES } from '@shared/messages.js'
 import { err, ok } from '@shared/result.js'
 import type { AppResult } from '@shared/result.js'
 
@@ -82,9 +83,7 @@ export class SlangOrchestrator implements IMessageOrchestrator {
           const probe = await probeFn({})
           const probeResult = tryParseJson(probe) as Record<string, unknown> | undefined
           if (probeResult?.['configured'] === false) {
-            return ok(
-              'Per utilizzare questa funzionalità devi prima autenticarti con Google. Usa /auth per avviare il processo.',
-            )
+            return ok(MESSAGES.AUTH_REQUIRED_GOOGLE)
           }
         }
       }
@@ -193,7 +192,7 @@ export class SlangOrchestrator implements IMessageOrchestrator {
 
     if (state.status !== 'converged' || state.outputs.length === 0) {
       logger.warn({ status: state.status }, 'Chat workflow did not converge')
-      return ok('Mi dispiace, non sono riuscito a elaborare la risposta. Riprova tra poco.')
+      return ok(MESSAGES.ERROR_CHAT_WORKFLOW)
     }
     const raw = state.outputs[0]
     return ok(stripSlangMeta(typeof raw === 'string' ? raw : JSON.stringify(raw)))
@@ -247,7 +246,7 @@ export class SlangOrchestrator implements IMessageOrchestrator {
 
     if (state.status !== 'converged' || state.outputs.length === 0) {
       logger.warn({ status: state.status }, 'Email-write workflow did not converge')
-      return ok('Mi dispiace, non sono riuscito a preparare la bozza. Riprova tra poco.')
+      return ok(MESSAGES.ERROR_EMAIL_WRITE_WORKFLOW)
     }
 
     const raw = state.outputs[0]
@@ -268,7 +267,7 @@ export class SlangOrchestrator implements IMessageOrchestrator {
       return ok(stripSlangMeta(confirmation))
     }
 
-    const fallback = output.message ?? 'Non sono riuscito a inviare la mail. Riprova tra poco.'
+    const fallback = output.message ?? MESSAGES.ERROR_EMAIL_SEND_FAILED
     return ok(stripSlangMeta(fallback))
   }
 
@@ -340,7 +339,7 @@ export class SlangOrchestrator implements IMessageOrchestrator {
   ): AppResult<string> {
     if (state.outputs.length === 0) {
       logger.warn({ status: state.status }, 'Workflow produced no outputs')
-      return ok('Mi dispiace, non sono riuscito a completare la richiesta. Riprova tra poco.')
+      return ok(MESSAGES.ERROR_GENERIC_WORKFLOW)
     }
     if (state.status !== 'converged') {
       logger.warn(

@@ -18,6 +18,7 @@ import { SlangOrchestrator } from './adapters/secondary/slang/slang.orchestrator
 import { buildToolRegistry } from './adapters/secondary/slang/slang.tools.js'
 import { HandleMessageUseCase } from './application/handle-message.use-case.js'
 import { loadConfig } from './shared/config.js'
+import { setLocale } from './shared/i18n/index.js'
 import { logger } from './shared/logger.js'
 
 export type BootstrapResult = {
@@ -31,6 +32,7 @@ export type BootstrapResult = {
  */
 export async function bootstrap(): Promise<BootstrapResult> {
   const config = loadConfig()
+  setLocale(config.LOCALE)
 
   // ─── Persistence ─────────────────────────────────────────────────────────────
   const dataSource = await createDataSource(config.DB_PATH)

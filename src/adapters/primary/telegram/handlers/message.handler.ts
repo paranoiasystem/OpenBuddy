@@ -13,7 +13,7 @@ export function createMessageHandler(handleMessage: IHandleMessage) {
 
     // Reject unregistered slash commands before they reach the orchestrator
     if (text.startsWith('/')) {
-      await ctx.reply('Comando non riconosciuto. Usa /help per vedere i comandi disponibili.')
+      await ctx.reply(MESSAGES.UNKNOWN_COMMAND)
       return
     }
 
