@@ -3,12 +3,14 @@ import { message } from 'telegraf/filters'
 
 import type { GoogleAuthManager } from '@adapters/secondary/google/google-auth.js'
 import type { IHandleMessage } from '@domain/ports/input/i-handle-message.js'
+import type { StatsService } from '@domain/service/stats.service.js'
 
 import type { BotContext } from './bot-context.type.js'
 import { createAuthHandler } from './handlers/auth.handler.js'
 import { helpHandler } from './handlers/help.handler.js'
 import { createMessageHandler } from './handlers/message.handler.js'
 import { startHandler } from './handlers/start.handler.js'
+import { createStatsHandler } from './handlers/stats.handler.js'
 import { createAuthMiddleware } from './middleware/auth.middleware.js'
 import { createErrorMiddleware } from './middleware/error.middleware.js'
 
@@ -19,6 +21,7 @@ type TelegramBotConfig = {
 
 type UseCases = {
   readonly handleMessage: IHandleMessage
+  readonly statsService?: StatsService
 }
 
 type Adapters = {
@@ -39,6 +42,9 @@ export function createTelegramBot(
   bot.command('start', startHandler)
   bot.command('help', helpHandler)
   bot.command('auth', createAuthHandler(adapters.authManager))
+  if (useCases.statsService) {
+    bot.command('stats', createStatsHandler(useCases.statsService))
+  }
   bot.on(message('text'), createMessageHandler(useCases.handleMessage))
 
   return bot
@@ -50,5 +56,6 @@ export async function registerBotCommands(bot: Telegraf<BotContext>): Promise<vo
     { command: 'start', description: 'Avvia il bot e mostra il messaggio di benvenuto' },
     { command: 'help', description: 'Mostra i comandi disponibili e le funzionalità' },
     { command: 'auth', description: 'Autentica il bot con Google (Calendar e Gmail)' },
+    { command: 'stats', description: 'Mostra le statistiche di utilizzo LLM' },
   ])
 }

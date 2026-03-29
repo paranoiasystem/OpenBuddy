@@ -33,11 +33,21 @@ type TriageResult = {
   provider: string
 }
 
+export type LlmUsageEvent = {
+  userId: string
+  workflowType: string
+  responseTimeMs: number
+  estimatedPromptTokens: number
+  estimatedCompletionTokens: number
+  model: string
+}
+
 type SlangOrchestratorConfig = {
   readonly openRouterApiKey: string
   readonly siteUrl?: string
   readonly appName?: string
   readonly timezone: string
+  readonly onUsage?: (event: LlmUsageEvent) => void
 }
 
 /**
@@ -181,15 +191,25 @@ export class SlangOrchestrator implements IMessageOrchestrator {
     historyText: string,
   ): Promise<AppResult<string>> {
     const source = await this.loadWorkflow('chat.slang')
-    const state = await ctx.runFlow(source, {
-      adapter: ctx.adapter,
-      params: {
-        user_message: opts.userMessage,
-        conversation_history: historyText,
-        user_name: opts.userName,
+    const state = await this.runFlowWithTracking(
+      ctx,
+      source,
+      {
+        adapter: ctx.adapter,
+        params: {
+          user_message: opts.userMessage,
+          conversation_history: historyText,
+          user_name: opts.userName,
+        },
+        tools: this.tools,
       },
-      tools: this.tools,
-    })
+      {
+        userId: opts.userId,
+        workflowType: 'chat',
+        model: 'anthropic/claude-sonnet-4.6',
+        inputLength: opts.userMessage.length + historyText.length,
+      },
+    )
 
     if (state.status !== 'converged' || state.outputs.length === 0) {
       logger.warn({ status: state.status }, 'Chat workflow did not converge')
@@ -206,23 +226,33 @@ export class SlangOrchestrator implements IMessageOrchestrator {
   ): Promise<AppResult<string>> {
     const source = await this.loadWorkflow('daily-report.slang')
     const now = new Date()
-    const state = await ctx.runFlow(source, {
-      adapter: ctx.adapter,
-      params: {
-        user_id: opts.userId,
-        user_name: opts.userName,
-        email_provider: 'gmail',
-        calendar_provider: 'google',
-        current_date: now.toLocaleDateString('it-IT', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-          timeZone: this.config.timezone,
-        }),
+    const state = await this.runFlowWithTracking(
+      ctx,
+      source,
+      {
+        adapter: ctx.adapter,
+        params: {
+          user_id: opts.userId,
+          user_name: opts.userName,
+          email_provider: 'gmail',
+          calendar_provider: 'google',
+          current_date: now.toLocaleDateString('it-IT', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            timeZone: this.config.timezone,
+          }),
+        },
+        tools: this.tools,
       },
-      tools: this.tools,
-    })
+      {
+        userId: opts.userId,
+        workflowType: 'daily-report',
+        model: 'anthropic/claude-sonnet-4.6',
+        inputLength: opts.userMessage.length,
+      },
+    )
 
     return this.extractResponse(state, 'briefing')
   }
@@ -234,16 +264,26 @@ export class SlangOrchestrator implements IMessageOrchestrator {
     historyText: string,
   ): Promise<AppResult<string>> {
     const source = await this.loadWorkflow('email-write.slang')
-    const state = await ctx.runFlow(source, {
-      adapter: ctx.adapter,
-      params: {
-        user_instruction: opts.userMessage,
-        recipient: String(params['recipient'] ?? ''),
-        conversation_history: historyText,
-        tone_preference: String(params['tone'] ?? 'professional'),
+    const state = await this.runFlowWithTracking(
+      ctx,
+      source,
+      {
+        adapter: ctx.adapter,
+        params: {
+          user_instruction: opts.userMessage,
+          recipient: String(params['recipient'] ?? ''),
+          conversation_history: historyText,
+          tone_preference: String(params['tone'] ?? 'professional'),
+        },
+        tools: this.tools,
       },
-      tools: this.tools,
-    })
+      {
+        userId: opts.userId,
+        workflowType: 'email-write',
+        model: 'anthropic/claude-sonnet-4.6',
+        inputLength: opts.userMessage.length + historyText.length,
+      },
+    )
 
     if (state.status !== 'converged' || state.outputs.length === 0) {
       logger.warn({ status: state.status }, 'Email-write workflow did not converge')
@@ -278,15 +318,25 @@ export class SlangOrchestrator implements IMessageOrchestrator {
     params: Record<string, unknown>,
   ): Promise<AppResult<string>> {
     const source = await this.loadWorkflow('email-read.slang')
-    const state = await ctx.runFlow(source, {
-      adapter: ctx.adapter,
-      params: {
-        user_request: opts.userMessage,
-        email_provider: String(params['provider'] ?? 'gmail'),
-        user_id: opts.userId,
+    const state = await this.runFlowWithTracking(
+      ctx,
+      source,
+      {
+        adapter: ctx.adapter,
+        params: {
+          user_request: opts.userMessage,
+          email_provider: String(params['provider'] ?? 'gmail'),
+          user_id: opts.userId,
+        },
+        tools: this.tools,
       },
-      tools: this.tools,
-    })
+      {
+        userId: opts.userId,
+        workflowType: 'email-read',
+        model: 'anthropic/claude-sonnet-4.6',
+        inputLength: opts.userMessage.length,
+      },
+    )
 
     return this.extractResponse(state, 'summary')
   }
@@ -297,17 +347,27 @@ export class SlangOrchestrator implements IMessageOrchestrator {
     params: Record<string, unknown>,
   ): Promise<AppResult<string>> {
     const source = await this.loadWorkflow('calendar.slang')
-    const state = await ctx.runFlow(source, {
-      adapter: ctx.adapter,
-      params: {
-        user_request: opts.userMessage,
-        calendar_provider: String(params['provider'] ?? 'google'),
-        user_id: opts.userId,
-        current_datetime: new Date().toISOString(),
-        timezone: this.config.timezone,
+    const state = await this.runFlowWithTracking(
+      ctx,
+      source,
+      {
+        adapter: ctx.adapter,
+        params: {
+          user_request: opts.userMessage,
+          calendar_provider: String(params['provider'] ?? 'google'),
+          user_id: opts.userId,
+          current_datetime: new Date().toISOString(),
+          timezone: this.config.timezone,
+        },
+        tools: this.tools,
       },
-      tools: this.tools,
-    })
+      {
+        userId: opts.userId,
+        workflowType: 'calendar',
+        model: 'anthropic/claude-sonnet-4.6',
+        inputLength: opts.userMessage.length,
+      },
+    )
 
     return this.extractResponse(state, 'response')
   }
@@ -327,6 +387,35 @@ export class SlangOrchestrator implements IMessageOrchestrator {
   private async loadWorkflow(filename: string): Promise<string> {
     const filePath = join(WORKFLOWS_DIR, filename)
     return readFile(filePath, 'utf-8')
+  }
+
+  /** Runs a workflow with timing and emits a usage event. */
+  private async runFlowWithTracking(
+    ctx: SlangContext,
+    source: string,
+    flowOpts: RunFlowOptions,
+    meta: { userId: string; workflowType: string; model: string; inputLength: number },
+  ): Promise<{ status: string; outputs: unknown[] }> {
+    const startTime = Date.now()
+    const state = await ctx.runFlow(source, flowOpts)
+    const responseTimeMs = Date.now() - startTime
+
+    if (this.config.onUsage) {
+      const outputLength = state.outputs.reduce<number>(
+        (sum, o) => sum + (typeof o === 'string' ? o.length : JSON.stringify(o).length),
+        0,
+      )
+      this.config.onUsage({
+        userId: meta.userId,
+        workflowType: meta.workflowType,
+        responseTimeMs,
+        estimatedPromptTokens: Math.ceil(meta.inputLength / 4),
+        estimatedCompletionTokens: Math.ceil(outputLength / 4),
+        model: meta.model,
+      })
+    }
+
+    return state
   }
 
   /**
