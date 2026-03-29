@@ -133,7 +133,9 @@ async function handleGoogleCallback(
 
   // Notify the user on Telegram
   try {
-    await deps.bot.telegram.sendMessage(telegramUserId, MESSAGES.AUTH_SUCCESS)
+    await deps.bot.telegram.sendMessage(telegramUserId, MESSAGES.AUTH_SUCCESS, {
+      parse_mode: 'HTML',
+    })
     logger.info({ telegramUserId }, 'Google auth success notification sent')
   } catch (cause) {
     logger.warn({ cause, telegramUserId }, 'Could not send Telegram auth success message')

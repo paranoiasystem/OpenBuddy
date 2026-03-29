@@ -4,6 +4,7 @@ import { DataSource } from 'typeorm'
 
 import { ConversationEntity } from './entities/conversation.entity.js'
 import { GoogleTokenEntity } from './entities/google-token.entity.js'
+import { LlmUsageEntity } from './entities/llm-usage.entity.js'
 import { ScheduledTaskEntity } from './entities/scheduled-task.entity.js'
 import { UserEntity } from './entities/user.entity.js'
 
@@ -12,10 +13,17 @@ export async function createDataSource(dbPath: string): Promise<DataSource> {
   const dataSource = new DataSource({
     type: 'better-sqlite3',
     database: dbPath,
-    entities: [UserEntity, ConversationEntity, ScheduledTaskEntity, GoogleTokenEntity],
+    entities: [
+      UserEntity,
+      ConversationEntity,
+      ScheduledTaskEntity,
+      GoogleTokenEntity,
+      LlmUsageEntity,
+    ],
     migrations: ['dist/adapters/secondary/persistence/migrations/*.js'],
     synchronize: process.env['NODE_ENV'] !== 'production',
-    logging: process.env['NODE_ENV'] === 'development',
+    logging:
+      process.env['NODE_ENV'] === 'development' ? ['error', 'warn', 'schema', 'migration'] : false,
   })
 
   await dataSource.initialize()

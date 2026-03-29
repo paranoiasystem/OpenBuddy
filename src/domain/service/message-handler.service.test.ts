@@ -1,46 +1,22 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 
 import { LlmUnavailableError } from '@domain/errors/llm-unavailable.error.js'
-import type {
-  IMessageOrchestrator,
-  MessageOrchestratorInput,
-} from '@domain/ports/output/i-message-orchestrator.js'
 import { FakeConversationRepository } from '@shared/__tests__/helpers/fake-conversation-repository.js'
+import { FakeMessageOrchestrator } from '@shared/__tests__/helpers/fake-message-orchestrator.js'
 import { FakeUserRepository } from '@shared/__tests__/helpers/fake-user-repository.js'
-import { ok, err } from '@shared/result.js'
 
 import { MessageHandlerService } from './message-handler.service.js'
-
-class FakeOrchestrator implements IMessageOrchestrator {
-  private _response = 'Hello from orchestrator'
-  readonly calls: MessageOrchestratorInput[] = []
-
-  setResponse(r: string): void {
-    this._response = r
-  }
-  setError(): void {
-    this._response = '__error__'
-  }
-
-  process(opts: MessageOrchestratorInput) {
-    this.calls.push(opts)
-    if (this._response === '__error__') {
-      return Promise.resolve(err(new LlmUnavailableError('test error')))
-    }
-    return Promise.resolve(ok(this._response))
-  }
-}
 
 describe('MessageHandlerService', () => {
   let userRepo: FakeUserRepository
   let conversationRepo: FakeConversationRepository
-  let orchestrator: FakeOrchestrator
+  let orchestrator: FakeMessageOrchestrator
   let service: MessageHandlerService
 
   beforeEach(() => {
     userRepo = new FakeUserRepository()
     conversationRepo = new FakeConversationRepository()
-    orchestrator = new FakeOrchestrator()
+    orchestrator = new FakeMessageOrchestrator()
     service = new MessageHandlerService(userRepo, conversationRepo, orchestrator)
   })
 

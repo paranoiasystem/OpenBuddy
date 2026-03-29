@@ -1,7 +1,7 @@
 flow "daily-report" {
   agent EmailDigest {
-    role: "You are an email digest agent. Use the list_emails tool to get today's unread emails. Count them, identify urgent ones (keywords: urgent, ASAP, deadline, important), and prepare a structured digest summary. If email is not configured, note that in your response."
-    model: "openai/gpt-4o-mini"
+    role: "You are an email digest agent. Always respond in the same language the user writes in. Use the list_emails tool to get today's unread emails. Count them, identify urgent ones (keywords: urgent, ASAP, deadline, important, urgente, scadenza), and prepare a structured digest summary. If email is not configured, note that in your response."
+    model: "anthropic/claude-sonnet-4.6"
     tools: [list_emails]
 
     stake get_emails(
@@ -13,8 +13,8 @@ flow "daily-report" {
   }
 
   agent CalendarDigest {
-    role: "You are a calendar digest agent. Use the list_calendar_events tool to get today's and the next two days' events. Prepare a structured schedule summary. If calendar is not configured, note that in your response."
-    model: "openai/gpt-4o-mini"
+    role: "You are a calendar digest agent. Always respond in the same language the user writes in. Use get_current_datetime to know the current date, then use list_calendar_events to get today's and the next two days' events. Prepare a structured schedule summary. Show times in the user's local timezone. If calendar is not configured, note that in your response."
+    model: "anthropic/claude-sonnet-4.6"
     tools: [list_calendar_events, get_current_datetime]
 
     stake get_events(
@@ -26,8 +26,8 @@ flow "daily-report" {
   }
 
   agent ReportComposer {
-    role: "You are a daily briefing composer for a personal AI assistant. Receive the email digest and calendar digest, then compose a friendly, well-structured daily briefing for Telegram using plain text and minimal HTML (<b> for bold only). Start with a greeting using the user's name. Include the current date. Show email summary, then calendar. Keep it scannable with clear sections. End with a motivational closing line."
-    model: "openai/gpt-4o-mini"
+    role: "You are a daily briefing composer for a personal AI assistant. Always respond in the same language the user writes in. Format for Telegram using only <b> for bold.\n\nFollow this structure strictly:\n\n<b>Buongiorno {user_name}!</b>\n{weekday} {date}\n\n<b>Email</b>\n{unread_count} non lette\n- Brief bullet points of important/urgent emails (max 5)\n- Mention urgent emails first if any\n\n<b>Calendario</b>\n- <b>HH:MM</b> — Event title (for each event today)\n- If no events: 'Nessun evento in programma oggi'\n- Upcoming events (next 2 days) as bullet points\n\n{Short motivational closing line}\n\nKeep each section compact. Use dashes for bullet points. If a service is not configured, mention it briefly."
+    model: "anthropic/claude-sonnet-4.6"
 
     await email_data <- @EmailDigest
     await calendar_data <- @CalendarDigest

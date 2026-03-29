@@ -1,45 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 
 import { ScheduleConflictError } from '@domain/errors/schedule-conflict.error.js'
-import type { CreateScheduledTaskInput, ScheduledTask } from '@domain/model/scheduled-task.js'
-import type { IScheduledTaskRepository } from '@domain/ports/output/i-scheduled-task-repository.js'
-import { ok } from '@shared/result.js'
+import type { CreateScheduledTaskInput } from '@domain/model/scheduled-task.js'
+import { FakeScheduledTaskRepository } from '@shared/__tests__/helpers/fake-scheduled-task-repository.js'
 
 import { ScheduleService } from './schedule.service.js'
-
-class FakeScheduledTaskRepository implements IScheduledTaskRepository {
-  private tasks: Map<string, ScheduledTask> = new Map()
-  private counter = 0
-
-  reset(): void {
-    this.tasks = new Map()
-    this.counter = 0
-  }
-
-  findById(id: string) {
-    return Promise.resolve(ok(this.tasks.get(id)))
-  }
-
-  findByUserId(userId: string) {
-    return Promise.resolve(ok([...this.tasks.values()].filter((t) => t.userId === userId)))
-  }
-
-  findAllEnabled() {
-    return Promise.resolve(ok([...this.tasks.values()].filter((t) => t.enabled)))
-  }
-
-  save(input: CreateScheduledTaskInput) {
-    const id = `task-${++this.counter}`
-    const task: ScheduledTask = { id, ...input, enabled: true, createdAt: new Date() }
-    this.tasks.set(id, task)
-    return Promise.resolve(ok(task))
-  }
-
-  delete(id: string) {
-    this.tasks.delete(id)
-    return Promise.resolve(ok(undefined))
-  }
-}
 
 describe('ScheduleService', () => {
   let repo: FakeScheduledTaskRepository

@@ -11,13 +11,17 @@ import { GoogleAuthManager } from './adapters/secondary/google/google-auth.js'
 import { createDataSource } from './adapters/secondary/persistence/data-source.js'
 import { ConversationRepository } from './adapters/secondary/persistence/repositories/conversation.repository.js'
 import { GoogleTokenRepository } from './adapters/secondary/persistence/repositories/google-token.repository.js'
+import { LlmUsageRepository } from './adapters/secondary/persistence/repositories/llm-usage.repository.js'
 import { ScheduledTaskRepository } from './adapters/secondary/persistence/repositories/scheduled-task.repository.js'
 import { UserRepository } from './adapters/secondary/persistence/repositories/user.repository.js'
 import { CronAdapter } from './adapters/secondary/scheduler/cron.adapter.js'
 import { SlangOrchestrator } from './adapters/secondary/slang/slang.orchestrator.js'
 import { buildToolRegistry } from './adapters/secondary/slang/slang.tools.js'
 import { HandleMessageUseCase } from './application/handle-message.use-case.js'
+import { StatsService } from './domain/service/stats.service.js'
 import { loadConfig } from './shared/config.js'
+import { estimateCost } from './shared/constants.js'
+import { setLocale } from './shared/i18n/index.js'
 import { logger } from './shared/logger.js'
 
 export type BootstrapResult = {
@@ -31,6 +35,7 @@ export type BootstrapResult = {
  */
 export async function bootstrap(): Promise<BootstrapResult> {
   const config = loadConfig()
+  setLocale(config.LOCALE)
 
   // ─── Persistence ─────────────────────────────────────────────────────────────
   const dataSource = await createDataSource(config.DB_PATH)
@@ -40,6 +45,7 @@ export async function bootstrap(): Promise<BootstrapResult> {
   const conversationRepo = new ConversationRepository(dataSource)
   const taskRepo = new ScheduledTaskRepository(dataSource)
   const googleTokenRepo = new GoogleTokenRepository(dataSource)
+  const llmUsageRepo = new LlmUsageRepository(dataSource)
 
   // ─── Google APIs (optional — graceful degradation if not configured) ──────────
   let authManager: GoogleAuthManager | undefined
@@ -68,18 +74,46 @@ export async function bootstrap(): Promise<BootstrapResult> {
   }
 
   // ─── SLANG orchestrator ───────────────────────────────────────────────────────
-  const tools = buildToolRegistry({ calendarGateway, emailGateway })
+  const tools = buildToolRegistry({ calendarGateway, emailGateway, timezone: config.TIMEZONE })
   const orchestrator = new SlangOrchestrator(
     {
       openRouterApiKey: config.OPENROUTER_API_KEY,
       siteUrl: 'https://github.com/openbuddy',
       appName: 'OpenBuddy',
+      timezone: config.TIMEZONE,
+      onUsage: (event) => {
+        const cost = estimateCost(
+          event.model,
+          event.estimatedPromptTokens,
+          event.estimatedCompletionTokens,
+        )
+        llmUsageRepo
+          .save({
+            userId: event.userId,
+            model: event.model,
+            promptTokens: event.estimatedPromptTokens,
+            completionTokens: event.estimatedCompletionTokens,
+            totalTokens: event.estimatedPromptTokens + event.estimatedCompletionTokens,
+            estimatedCost: cost,
+            responseTimeMs: event.responseTimeMs,
+            workflowType: event.workflowType,
+          })
+          .then((result) => {
+            if (result.isErr()) {
+              logger.warn({ error: result.error.message }, 'Failed to save LLM usage record')
+            }
+          })
+          .catch((err: unknown) => {
+            logger.warn({ err }, 'Unexpected error saving LLM usage record')
+          })
+      },
     },
     tools,
   )
 
   // ─── Use cases ────────────────────────────────────────────────────────────────
   const handleMessage = new HandleMessageUseCase(userRepo, conversationRepo, orchestrator)
+  const statsService = new StatsService(llmUsageRepo)
 
   // ─── Scheduler ───────────────────────────────────────────────────────────────
   const cronAdapter = new CronAdapter(taskRepo, async (task) => {
@@ -98,10 +132,9 @@ export async function bootstrap(): Promise<BootstrapResult> {
   }
 
   // ─── Primary adapters ────────────────────────────────────────────────────────
-  // Bot is created before the HTTP server so it can be passed to the OAuth callback handler
   const bot = createTelegramBot(
     { token: config.TELEGRAM_BOT_TOKEN, allowedUserIds: config.ALLOWED_USER_IDS },
-    { handleMessage },
+    { handleMessage, statsService },
     { authManager },
   )
 

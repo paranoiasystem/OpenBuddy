@@ -1,3 +1,5 @@
+import type { EmailAttachment } from './email-attachment.js'
+
 export type EmailMessage = {
   readonly id: string
   readonly threadId: string
@@ -8,4 +10,6 @@ export type EmailMessage = {
   readonly body: string
   readonly receivedAt: Date
   readonly isUnread: boolean
+  readonly labelIds: ReadonlyArray<string>
+  readonly attachments: ReadonlyArray<EmailAttachment>
 }

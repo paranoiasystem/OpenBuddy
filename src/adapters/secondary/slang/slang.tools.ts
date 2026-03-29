@@ -2,6 +2,17 @@ import type { ICalendarGateway } from '@domain/ports/output/i-calendar-gateway.j
 import type { IEmailGateway } from '@domain/ports/output/i-email-gateway.js'
 import { logger } from '@shared/logger.js'
 
+import {
+  archiveEmail,
+  getEmailAttachment,
+  listEmails,
+  markEmailAsRead,
+  modifyEmailLabels,
+  searchEmails,
+  sendEmail,
+  trashEmail,
+} from './slang.email-tools.js'
+
 /** Shape of a SLANG tool handler: receives args, returns a string result. */
 export type SlangToolHandler = (args: Record<string, unknown>) => Promise<string>
 
@@ -10,6 +21,7 @@ export type SlangToolRegistry = Record<string, SlangToolHandler>
 type ToolDependencies = {
   readonly calendarGateway: ICalendarGateway | undefined
   readonly emailGateway: IEmailGateway | undefined
+  readonly timezone: string
 }
 
 /**
@@ -18,28 +30,36 @@ type ToolDependencies = {
  */
 export function buildToolRegistry(deps: ToolDependencies): SlangToolRegistry {
   return {
-    get_current_datetime: getCurrentDatetime,
+    get_current_datetime: getCurrentDatetime(deps.timezone),
     list_calendar_events: listCalendarEvents(deps.calendarGateway),
-    create_calendar_event: createCalendarEvent(deps.calendarGateway),
+    create_calendar_event: createCalendarEvent(deps.calendarGateway, deps.timezone),
     list_emails: listEmails(deps.emailGateway),
     search_emails: searchEmails(deps.emailGateway),
     send_email: sendEmail(deps.emailGateway),
+    archive_email: archiveEmail(deps.emailGateway),
+    modify_email_labels: modifyEmailLabels(deps.emailGateway),
+    mark_email_as_read: markEmailAsRead(deps.emailGateway),
+    trash_email: trashEmail(deps.emailGateway),
+    get_email_attachment: getEmailAttachment(deps.emailGateway),
   }
 }
 
 // ─── Tool implementations ────────────────────────────────────────────────────
 
-function getCurrentDatetime(_args: Record<string, unknown>): Promise<string> {
-  const now = new Date()
-  return Promise.resolve(
-    JSON.stringify({
-      iso: now.toISOString(),
-      readable: now.toLocaleString('it-IT', { timeZone: 'Europe/Rome' }),
-      date: now.toLocaleDateString('it-IT'),
-      time: now.toLocaleTimeString('it-IT'),
-      dayOfWeek: now.toLocaleDateString('it-IT', { weekday: 'long' }),
-    }),
-  )
+function getCurrentDatetime(timezone: string) {
+  return (_args: Record<string, unknown>): Promise<string> => {
+    const now = new Date()
+    return Promise.resolve(
+      JSON.stringify({
+        iso: now.toISOString(),
+        readable: now.toLocaleString('it-IT', { timeZone: timezone }),
+        date: now.toLocaleDateString('it-IT', { timeZone: timezone }),
+        time: now.toLocaleTimeString('it-IT', { timeZone: timezone }),
+        dayOfWeek: now.toLocaleDateString('it-IT', { weekday: 'long', timeZone: timezone }),
+        timezone,
+      }),
+    )
+  }
 }
 
 function listCalendarEvents(gateway: ICalendarGateway | undefined) {
@@ -57,7 +77,7 @@ function listCalendarEvents(gateway: ICalendarGateway | undefined) {
   }
 }
 
-function createCalendarEvent(gateway: ICalendarGateway | undefined) {
+function createCalendarEvent(gateway: ICalendarGateway | undefined, timezone: string) {
   return async (args: Record<string, unknown>): Promise<string> => {
     if (!gateway) {
       return JSON.stringify({ configured: false, message: 'Google Calendar not configured.' })
@@ -78,8 +98,8 @@ function createCalendarEvent(gateway: ICalendarGateway | undefined) {
       })
     }
 
-    const startAt = new Date(String(args['start_at']))
-    const endAt = new Date(String(args['end_at']))
+    const startAt = new Date(ensureTimezoneOffset(String(args['start_at']), timezone))
+    const endAt = new Date(ensureTimezoneOffset(String(args['end_at']), timezone))
 
     if (isNaN(startAt.getTime()) || isNaN(endAt.getTime())) {
       return JSON.stringify({ success: false, error: 'Invalid date format. Use ISO 8601.' })
@@ -103,79 +123,68 @@ function createCalendarEvent(gateway: ICalendarGateway | undefined) {
   }
 }
 
-function listEmails(gateway: IEmailGateway | undefined) {
-  return async (args: Record<string, unknown>): Promise<string> => {
-    if (!gateway) {
-      return JSON.stringify({
-        configured: false,
-        message: 'Gmail not configured. Run /auth to authenticate.',
-        emails: [],
-        unread_count: 0,
-      })
-    }
-    const maxResults = typeof args['max_results'] === 'number' ? args['max_results'] : 10
-    const labelIds = Array.isArray(args['label_ids']) ? (args['label_ids'] as string[]) : undefined
+// ─── Timezone helpers ─────────────────────────────────────────────────────────
 
-    const result = await gateway.listMessages({
-      maxResults,
-      ...(labelIds !== undefined ? { labelIds } : {}),
-    })
-    if (result.isErr()) {
-      logger.warn({ error: result.error.code }, 'list_emails tool error')
-      return JSON.stringify({ configured: true, error: result.error.message, emails: [] })
-    }
-    return JSON.stringify({
-      configured: true,
-      emails: result.value,
-      unread_count: result.value.filter((m) => m.isUnread).length,
-    })
-  }
+/** Computes the UTC offset string (e.g. "+02:00") for a given date and IANA timezone. */
+export function getTimezoneOffset(date: Date, timezone: string): string {
+  const utcParts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'UTC',
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: false,
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+  }).formatToParts(date)
+
+  const localParts = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: false,
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+  }).formatToParts(date)
+
+  const get = (parts: Intl.DateTimeFormatPart[], type: string): number =>
+    Number(parts.find((p) => p.type === type)?.value ?? 0)
+
+  const utcMinutes =
+    Date.UTC(
+      get(utcParts, 'year'),
+      get(utcParts, 'month') - 1,
+      get(utcParts, 'day'),
+      get(utcParts, 'hour'),
+      get(utcParts, 'minute'),
+    ) / 60000
+  const localMinutes =
+    Date.UTC(
+      get(localParts, 'year'),
+      get(localParts, 'month') - 1,
+      get(localParts, 'day'),
+      get(localParts, 'hour'),
+      get(localParts, 'minute'),
+    ) / 60000
+
+  const offsetMinutes = localMinutes - utcMinutes
+  const sign = offsetMinutes >= 0 ? '+' : '-'
+  const absMinutes = Math.abs(offsetMinutes)
+  const h = String(Math.floor(absMinutes / 60)).padStart(2, '0')
+  const m = String(absMinutes % 60).padStart(2, '0')
+  return `${sign}${h}:${m}`
 }
 
-function searchEmails(gateway: IEmailGateway | undefined) {
-  return async (args: Record<string, unknown>): Promise<string> => {
-    if (!gateway) {
-      return JSON.stringify({
-        configured: false,
-        message: 'Gmail not configured. Run /auth to authenticate.',
-        emails: [],
-      })
-    }
-    const query = String(args['query'] ?? '')
-    const maxResults = typeof args['max_results'] === 'number' ? args['max_results'] : 10
-
-    const result = await gateway.searchMessages(query, maxResults)
-    if (result.isErr()) {
-      logger.warn({ error: result.error.code }, 'search_emails tool error')
-      return JSON.stringify({ configured: true, error: result.error.message, emails: [] })
-    }
-    return JSON.stringify({ configured: true, emails: result.value })
+/**
+ * If an ISO datetime string lacks a timezone offset (naive), appends the
+ * configured timezone offset so that `new Date()` interprets it correctly.
+ */
+function ensureTimezoneOffset(isoString: string, timezone: string): string {
+  const trimmed = isoString.trim()
+  if (/[Zz]$/.test(trimmed) || /[+-]\d{2}:\d{2}$/.test(trimmed)) {
+    return trimmed
   }
-}
-
-function sendEmail(gateway: IEmailGateway | undefined) {
-  return async (args: Record<string, unknown>): Promise<string> => {
-    if (!gateway) {
-      return JSON.stringify({
-        configured: false,
-        message: 'Gmail not configured. Run /auth to authenticate.',
-      })
-    }
-    const to = Array.isArray(args['to']) ? (args['to'] as string[]) : [String(args['to'] ?? '')]
-    const subject = String(args['subject'] ?? '')
-    const body = String(args['body'] ?? '')
-    const cc = Array.isArray(args['cc']) ? (args['cc'] as string[]) : undefined
-
-    const result = await gateway.sendDraft({
-      to,
-      subject,
-      body,
-      ...(cc !== undefined ? { cc } : {}),
-    })
-    if (result.isErr()) {
-      logger.warn({ error: result.error.code }, 'send_email tool error')
-      return JSON.stringify({ success: false, error: result.error.message })
-    }
-    return JSON.stringify({ success: true, message: 'Email sent successfully.' })
-  }
+  const refDate = new Date(trimmed + 'Z')
+  if (isNaN(refDate.getTime())) return trimmed
+  return trimmed + getTimezoneOffset(refDate, timezone)
 }

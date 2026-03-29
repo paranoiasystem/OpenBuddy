@@ -15,20 +15,20 @@ export function createAuthHandler(authManager: GoogleAuthManager | undefined) {
       return
     }
 
-    if (authManager.isAuthenticated()) {
-      await ctx.reply(MESSAGES.AUTH_ALREADY_DONE)
-      return
-    }
+    const alreadyAuthenticated = authManager.isAuthenticated()
 
     try {
       const authUrl = authManager.generateAuthUrl(telegramId)
-      await ctx.reply(MESSAGES.AUTH_START, {
+      const text = alreadyAuthenticated
+        ? `${MESSAGES.AUTH_ALREADY_DONE}\n\n${MESSAGES.AUTH_START}`
+        : MESSAGES.AUTH_START
+      await ctx.reply(text, {
         parse_mode: 'HTML',
         reply_markup: {
           inline_keyboard: [[{ text: '🔗 Autorizza Google', url: authUrl }]],
         },
       })
-      logger.info({ telegramId }, 'Auth URL sent to user')
+      logger.info({ telegramId, reauth: alreadyAuthenticated }, 'Auth URL sent to user')
     } catch (cause) {
       logger.error({ cause }, 'Failed to generate auth URL')
       await ctx.reply(MESSAGES.ERROR_GENERIC)

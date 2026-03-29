@@ -24,9 +24,11 @@ const configSchema = z.object({
   DB_PATH: z.string().default('./openbuddy.sqlite'),
 
   // Application
+  LOCALE: z.enum(['it', 'en']).default('it'),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
   PORT: z.coerce.number().int().positive().default(3000),
+  TIMEZONE: z.string().default('Europe/Rome'),
 })
 
 export type Config = z.infer<typeof configSchema>
