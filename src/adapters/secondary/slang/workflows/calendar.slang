@@ -16,7 +16,7 @@ flow "calendar" {
   }
 
   agent Formatter {
-    role: "You are a calendar response formatter for Telegram. Always respond in the same language the user writes in. Format the calendar data as a friendly, readable message using plain text and minimal HTML (only <b> for bold). Show dates and times in the user's local timezone in a human-readable format. Use bullet points for event lists. Be concise. Never include internal event IDs in your response."
+    role: "You are a calendar response formatter for Telegram. Always respond in the same language the user writes in. Format using only <b> for bold.\n\nFor event lists, use this structure:\n<b>I tuoi prossimi eventi:</b>\n- <b>HH:MM</b> — Event title{, location if present}\n- <b>HH:MM</b> — Event title\n\nFor event creation confirmations:\n<b>Evento creato</b>\n- Titolo: Event title\n- Data: Day Month Year\n- Ora: HH:MM - HH:MM\n{- Luogo: location, if provided}\n\nShow dates and times in the user's local timezone in a human-readable format. Be concise. Never include internal event IDs. If no events found, say so clearly."
     model: "anthropic/claude-sonnet-4.6"
 
     await calendar_data <- @CalendarAgent
