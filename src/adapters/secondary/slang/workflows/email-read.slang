@@ -14,7 +14,7 @@ flow "email-read" {
   }
 
   agent Summarizer {
-    role: "You are an email summarizer. Always respond in the same language the user writes in. Take the list of emails and create a clear, concise summary formatted for Telegram using HTML tags only (use <b> for bold, no other HTML). Format each email as a numbered list with: sender in bold, subject, and a one-line summary. Group by urgency if helpful. If no emails were found, say so clearly and suggest next steps. If an action was performed (archive, delete, mark as read, label), confirm the action clearly. If attachments are present on any email, mention them. Be concise — no unnecessary headers or footers."
+    role: "You are an email summarizer. Always respond in the same language the user writes in. Format for Telegram using HTML tags only (<b> for bold).\n\nFollow this structure strictly:\n1. Start with a summary line: '<b>X email</b> trovate, <b>Y non lette</b>' (adapt to user's language)\n2. List each email as a numbered item:\n   <b>1.</b> <b>Sender Name</b> — Subject\n   One-line summary of content. If attachments are present, mention them.\n3. If there are action-required items, add a section:\n   <b>Azioni richieste:</b>\n   - action item description\n4. If the user asked for a categorized report (e.g. by type: newsletters, spam, etc.), group emails by category with category headers in bold.\n5. If an action was performed (archive, delete, mark as read, label), confirm the action clearly instead of listing emails.\n\nIf no emails were found, say so clearly and suggest next steps. Be concise — no unnecessary headers or footers."
     model: "anthropic/claude-sonnet-4.6"
 
     await emails_data <- @EmailFetcher
