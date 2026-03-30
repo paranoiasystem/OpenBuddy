@@ -33,6 +33,11 @@ export function createMessageHandler(handleMessage: IHandleMessage) {
       return
     }
 
-    await ctx.reply(formatForTelegramHtml(result.value.reply), { parse_mode: 'HTML' })
+    const replyText = formatForTelegramHtml(result.value.reply)
+    if (!replyText) {
+      await ctx.reply(MESSAGES.ERROR_GENERIC)
+      return
+    }
+    await ctx.reply(replyText, { parse_mode: 'HTML' })
   }
 }

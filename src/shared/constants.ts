@@ -12,15 +12,14 @@ export const OPENROUTER_MODELS = {
   /** Ultra-cheap: triage, sender, formatter — mechanical/structured tasks. */
   TRIAGE: 'stepfun/step-3.5-flash',
   FORMATTER: 'stepfun/step-3.5-flash',
-  /** Mid-tier: tool-calling agents (email fetcher, calendar, daily digests). */
-  TOOL_AGENT: 'moonshotai/kimi-k2.5',
-  /** Italian-quality tier: chat assistant, daily report composer. */
+  /** Tool-calling agents + conversational (email, calendar, daily digests, chat). */
+  TOOL_AGENT: 'anthropic/claude-haiku-4.5',
   CHAT: 'anthropic/claude-haiku-4.5',
   COMPOSER: 'anthropic/claude-haiku-4.5',
   // Legacy aliases kept for backwards compatibility
   DEFAULT: 'anthropic/claude-haiku-4.5',
   FAST: 'stepfun/step-3.5-flash',
-  CAPABLE: 'moonshotai/kimi-k2.5',
+  CAPABLE: 'anthropic/claude-haiku-4.5',
 } as const
 
 /** Approximate cost per million tokens for OpenRouter models (USD). */
