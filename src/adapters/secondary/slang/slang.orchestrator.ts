@@ -205,7 +205,7 @@ export class SlangOrchestrator implements IMessageOrchestrator {
       {
         userId: opts.userId,
         workflowType: 'chat',
-        model: 'anthropic/claude-sonnet-4.6',
+        model: 'anthropic/claude-haiku-4.5',
         inputLength: opts.userMessage.length + historyText.length,
       },
     )
@@ -248,7 +248,7 @@ export class SlangOrchestrator implements IMessageOrchestrator {
       {
         userId: opts.userId,
         workflowType: 'daily-report',
-        model: 'anthropic/claude-sonnet-4.6',
+        model: 'moonshotai/kimi-k2.5',
         inputLength: opts.userMessage.length,
       },
     )
@@ -279,7 +279,7 @@ export class SlangOrchestrator implements IMessageOrchestrator {
       {
         userId: opts.userId,
         workflowType: 'email-write',
-        model: 'anthropic/claude-sonnet-4.6',
+        model: 'moonshotai/kimi-k2.5',
         inputLength: opts.userMessage.length + historyText.length,
       },
     )
@@ -332,7 +332,7 @@ export class SlangOrchestrator implements IMessageOrchestrator {
       {
         userId: opts.userId,
         workflowType: 'email-read',
-        model: 'anthropic/claude-sonnet-4.6',
+        model: 'moonshotai/kimi-k2.5',
         inputLength: opts.userMessage.length,
       },
     )
@@ -363,7 +363,7 @@ export class SlangOrchestrator implements IMessageOrchestrator {
       {
         userId: opts.userId,
         workflowType: 'calendar',
-        model: 'anthropic/claude-sonnet-4.6',
+        model: 'moonshotai/kimi-k2.5',
         inputLength: opts.userMessage.length,
       },
     )

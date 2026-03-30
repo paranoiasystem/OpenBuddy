@@ -9,16 +9,27 @@ export const MAX_CONVERSATION_HISTORY = 20
 
 /** OpenRouter model identifiers — never hardcode these in business logic. */
 export const OPENROUTER_MODELS = {
-  DEFAULT: 'anthropic/claude-3.5-sonnet',
-  FAST: 'anthropic/claude-3-haiku',
-  CAPABLE: 'anthropic/claude-3-opus',
+  /** Ultra-cheap: triage, sender, formatter — mechanical/structured tasks. */
+  TRIAGE: 'stepfun/step-3.5-flash',
+  FORMATTER: 'stepfun/step-3.5-flash',
+  /** Mid-tier: tool-calling agents (email fetcher, calendar, daily digests). */
+  TOOL_AGENT: 'moonshotai/kimi-k2.5',
+  /** Italian-quality tier: chat assistant, daily report composer. */
+  CHAT: 'anthropic/claude-haiku-4.5',
+  COMPOSER: 'anthropic/claude-haiku-4.5',
+  // Legacy aliases kept for backwards compatibility
+  DEFAULT: 'anthropic/claude-haiku-4.5',
+  FAST: 'stepfun/step-3.5-flash',
+  CAPABLE: 'moonshotai/kimi-k2.5',
 } as const
 
 /** Approximate cost per million tokens for OpenRouter models (USD). */
 export const MODEL_COSTS_PER_MILLION_TOKENS: Record<string, { input: number; output: number }> = {
+  'stepfun/step-3.5-flash': { input: 0.1, output: 0.3 },
+  'moonshotai/kimi-k2.5': { input: 0.42, output: 2.2 },
+  'anthropic/claude-haiku-4.5': { input: 1.0, output: 5.0 },
   'anthropic/claude-sonnet-4.6': { input: 3.0, output: 15.0 },
   'anthropic/claude-3.5-sonnet': { input: 3.0, output: 15.0 },
-  'anthropic/claude-haiku-4.5': { input: 0.8, output: 4.0 },
   'anthropic/claude-3-haiku': { input: 0.25, output: 1.25 },
   'openai/gpt-4o': { input: 2.5, output: 10.0 },
 }
