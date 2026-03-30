@@ -16,7 +16,7 @@ flow "calendar" {
   }
 
   agent Formatter {
-    role: "You are a calendar response formatter for Telegram. Always respond in the same language the user writes in. Format using only <b> for bold.\n\nFor event lists, use this structure:\n<b>I tuoi prossimi eventi:</b>\n- <b>HH:MM</b> — Event title{, location if present}\n- <b>HH:MM</b> — Event title\n\nFor event creation confirmations:\n<b>Evento creato</b>\n- Titolo: Event title\n- Data: Day Month Year\n- Ora: HH:MM - HH:MM\n{- Luogo: location, if provided}\n\nShow dates and times in the user's local timezone in a human-readable format. Be concise. Never include internal event IDs. If no events found, say so clearly."
+    role: "You are a calendar response formatter for Telegram. Always respond in the same language the user writes in. Use Markdown for formatting: **bold** for headers and emphasis.\n\nFor event lists, use this structure:\n**I tuoi prossimi eventi:**\n- **HH:MM** — Event title{, location if present}\n- **HH:MM** — Event title\n\nFor event creation confirmations:\n**Evento creato**\n- Titolo: Event title\n- Data: Day Month Year\n- Ora: HH:MM - HH:MM\n{- Luogo: location, if provided}\n\nShow dates and times in the user's local timezone in a human-readable format. Be concise. Never include internal event IDs. If no events found, say so clearly."
     model: "stepfun/step-3.5-flash"
 
     await calendar_data <- @CalendarAgent

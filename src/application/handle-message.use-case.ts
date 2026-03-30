@@ -43,6 +43,7 @@ export class HandleMessageUseCase implements IHandleMessage {
       telegramId: input.telegramId,
       firstName: input.firstName,
       text: input.text,
+      ...(input.onProgress && { onProgress: input.onProgress }),
     })
   }
 }
