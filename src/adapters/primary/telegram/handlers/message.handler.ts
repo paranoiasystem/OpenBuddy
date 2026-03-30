@@ -25,6 +25,9 @@ export function createMessageHandler(handleMessage: IHandleMessage) {
       username: ctx.from?.username,
       firstName: ctx.from?.first_name ?? 'User',
       text,
+      onProgress: async () => {
+        await ctx.reply(MESSAGES.PROCESSING)
+      },
     })
 
     if (result.isErr()) {

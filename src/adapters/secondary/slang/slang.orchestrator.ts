@@ -7,6 +7,7 @@ import type {
   IMessageOrchestrator,
   MessageOrchestratorInput,
 } from '@domain/ports/output/i-message-orchestrator.js'
+import { TRIAGE_CONTEXT_MESSAGES, WORKFLOW_CONTEXT_MESSAGES } from '@shared/constants.js'
 import { logger } from '@shared/logger.js'
 import { MESSAGES } from '@shared/messages.js'
 import { err, ok } from '@shared/result.js'
@@ -98,7 +99,12 @@ export class SlangOrchestrator implements IMessageOrchestrator {
         }
       }
 
-      // Step 3: Route to the appropriate workflow
+      // Step 3: Notify the user if a long-running workflow is about to start
+      if (triage.intent !== 'chat' && triage.intent !== 'unknown') {
+        await opts.onProgress?.()
+      }
+
+      // Step 4: Route to the appropriate workflow
       return await this.routeToWorkflow({ runFlow, adapter }, triage.intent, triage.params, opts)
     } catch (cause) {
       logger.error({ cause }, 'SlangOrchestrator fatal error')
@@ -114,7 +120,7 @@ export class SlangOrchestrator implements IMessageOrchestrator {
   ): Promise<AppResult<TriageResult>> {
     const source = await this.loadWorkflow('triage.slang')
     const historyText = opts.conversationHistory
-      .slice(-5)
+      .slice(-TRIAGE_CONTEXT_MESSAGES)
       .map((m) => `${m.role}: ${stripSlangMeta(m.content)}`)
       .join('\n')
 
@@ -159,7 +165,7 @@ export class SlangOrchestrator implements IMessageOrchestrator {
     opts: MessageOrchestratorInput,
   ): Promise<AppResult<string>> {
     const historyText = opts.conversationHistory
-      .slice(-10)
+      .slice(-WORKFLOW_CONTEXT_MESSAGES)
       .map((m) => `${m.role}: ${stripSlangMeta(m.content)}`)
       .join('\n')
 
