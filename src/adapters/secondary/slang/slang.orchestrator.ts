@@ -99,7 +99,7 @@ export class SlangOrchestrator implements IMessageOrchestrator {
       }
 
       // Step 3: Route to the appropriate workflow
-      return this.routeToWorkflow({ runFlow, adapter }, triage.intent, triage.params, opts)
+      return await this.routeToWorkflow({ runFlow, adapter }, triage.intent, triage.params, opts)
     } catch (cause) {
       logger.error({ cause }, 'SlangOrchestrator fatal error')
       return err(new ExternalServiceError('Slang', String(cause)))
