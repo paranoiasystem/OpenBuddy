@@ -215,7 +215,8 @@ export class SlangOrchestrator implements IMessageOrchestrator {
       return ok(MESSAGES.ERROR_CHAT_WORKFLOW)
     }
     const raw = state.outputs[0]
-    return ok(stripSlangMeta(typeof raw === 'string' ? raw : JSON.stringify(raw)))
+    const text = stripSlangMeta(typeof raw === 'string' ? raw : JSON.stringify(raw))
+    return ok(text || MESSAGES.ERROR_CHAT_WORKFLOW)
   }
 
   private async runDailyReport(
@@ -248,7 +249,7 @@ export class SlangOrchestrator implements IMessageOrchestrator {
       {
         userId: opts.userId,
         workflowType: 'daily-report',
-        model: 'moonshotai/kimi-k2.5',
+        model: 'anthropic/claude-haiku-4.5',
         inputLength: opts.userMessage.length,
       },
     )
@@ -279,7 +280,7 @@ export class SlangOrchestrator implements IMessageOrchestrator {
       {
         userId: opts.userId,
         workflowType: 'email-write',
-        model: 'moonshotai/kimi-k2.5',
+        model: 'anthropic/claude-haiku-4.5',
         inputLength: opts.userMessage.length + historyText.length,
       },
     )
@@ -332,7 +333,7 @@ export class SlangOrchestrator implements IMessageOrchestrator {
       {
         userId: opts.userId,
         workflowType: 'email-read',
-        model: 'moonshotai/kimi-k2.5',
+        model: 'anthropic/claude-haiku-4.5',
         inputLength: opts.userMessage.length,
       },
     )
@@ -363,7 +364,7 @@ export class SlangOrchestrator implements IMessageOrchestrator {
       {
         userId: opts.userId,
         workflowType: 'calendar',
-        model: 'moonshotai/kimi-k2.5',
+        model: 'anthropic/claude-haiku-4.5',
         inputLength: opts.userMessage.length,
       },
     )
@@ -441,7 +442,8 @@ export class SlangOrchestrator implements IMessageOrchestrator {
 
     // Already a parsed object (future-proof if slang starts parsing outputs)
     if (typeof raw === 'object' && raw !== null && key in raw) {
-      return ok(stripSlangMeta(String((raw as Record<string, unknown>)[key])))
+      const text = stripSlangMeta(String((raw as Record<string, unknown>)[key]))
+      return ok(text || MESSAGES.ERROR_GENERIC_WORKFLOW)
     }
 
     // Raw string: try to parse JSON and extract the key
@@ -452,10 +454,12 @@ export class SlangOrchestrator implements IMessageOrchestrator {
         parsed !== null &&
         key in (parsed as Record<string, unknown>)
       ) {
-        return ok(stripSlangMeta(String((parsed as Record<string, unknown>)[key])))
+        const text = stripSlangMeta(String((parsed as Record<string, unknown>)[key]))
+        return ok(text || MESSAGES.ERROR_GENERIC_WORKFLOW)
       }
       // No JSON found: return text with slang metadata stripped
-      return ok(stripSlangMeta(raw))
+      const text = stripSlangMeta(raw)
+      return ok(text || MESSAGES.ERROR_GENERIC_WORKFLOW)
     }
 
     return ok(JSON.stringify(raw))

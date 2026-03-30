@@ -1,7 +1,7 @@
 flow "email-write" {
   agent Drafter {
     role: "You are a professional email writer. Draft a clear, well-structured email based on the user's instructions. IMPORTANT: Respect the user's original text as closely as possible. If the user specifies the exact body, use it verbatim — do not add formalities, greetings, or closings unless explicitly asked. Match the appropriate tone (formal, casual, etc.) based on context. Before returning, verify the draft preserves the user's original intent faithfully and is send-ready. Return the drafted email as a JSON object with subject, body, and to fields."
-    model: "moonshotai/kimi-k2.5"
+    model: "anthropic/claude-haiku-4.5"
 
     stake draft(
       instruction: params.user_instruction,

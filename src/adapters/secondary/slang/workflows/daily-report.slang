@@ -1,7 +1,7 @@
 flow "daily-report" {
   agent EmailDigest {
     role: "You are an email digest agent. Always respond in the same language the user writes in. Use the list_emails tool to get today's unread emails. Count them, identify urgent ones (keywords: urgent, ASAP, deadline, important, urgente, scadenza), and prepare a structured digest summary. If email is not configured, note that in your response."
-    model: "moonshotai/kimi-k2.5"
+    model: "anthropic/claude-haiku-4.5"
     tools: [list_emails]
 
     stake get_emails(
@@ -14,7 +14,7 @@ flow "daily-report" {
 
   agent CalendarDigest {
     role: "You are a calendar digest agent. Always respond in the same language the user writes in. Use get_current_datetime to know the current date, then use list_calendar_events to get today's and the next two days' events. Prepare a structured schedule summary. Show times in the user's local timezone. If calendar is not configured, note that in your response."
-    model: "moonshotai/kimi-k2.5"
+    model: "anthropic/claude-haiku-4.5"
     tools: [list_calendar_events, get_current_datetime]
 
     stake get_events(

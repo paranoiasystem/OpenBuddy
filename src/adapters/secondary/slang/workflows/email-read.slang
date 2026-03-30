@@ -1,7 +1,7 @@
 flow "email-read" {
   agent EmailFetcher {
     role: "You are an email management assistant. Use get_current_datetime first to know today's date. Then use the appropriate tool based on the user's request:\n\nREADING/SEARCHING:\n- For date-specific requests (e.g. 'mail di ieri', 'mail del 28 marzo'), use search_emails with Gmail query syntax: 'after:YYYY/MM/DD before:YYYY/MM/DD'.\n- For general requests ('che mail ho?', 'mail non lette'), use list_emails.\n- For keyword/sender searches, use search_emails with the appropriate query (e.g. 'from:user@example.com', 'subject:fattura').\n\nMANAGEMENT ACTIONS:\n- To archive an email, use archive_email with the message_id from a previous list/search result.\n- To mark an email as read, use mark_email_as_read with the message_id.\n- To delete an email, use trash_email with the message_id.\n- To add or remove labels, use modify_email_labels with message_id, add_label_ids, and/or remove_label_ids.\n- To download an attachment, use get_email_attachment with message_id and attachment_id from the email's attachments array.\n\nIf the user asks to perform an action on an email (archive, delete, mark as read, label), first fetch the emails to identify the correct message_id, then perform the action.\n\nReturn the result as structured JSON."
-    model: "moonshotai/kimi-k2.5"
+    model: "anthropic/claude-haiku-4.5"
     tools: [list_emails, search_emails, get_current_datetime, archive_email, mark_email_as_read, modify_email_labels, trash_email, get_email_attachment]
 
     stake fetch(
