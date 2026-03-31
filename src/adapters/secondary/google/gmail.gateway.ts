@@ -11,6 +11,7 @@ import type {
   ListMessagesOptions,
   ModifyLabelsOptions,
 } from '@domain/ports/output/i-email-gateway.js'
+import { GMAIL_USER_ID } from '@shared/constants.js'
 import { logger } from '@shared/logger.js'
 import { err, ok } from '@shared/result.js'
 import type { AppResult } from '@shared/result.js'
@@ -26,117 +27,84 @@ export class GmailGateway implements IEmailGateway {
   }
 
   async sendDraft(draft: EmailDraft): Promise<AppResult<void>> {
-    try {
+    return this.wrapGmailCall('sendDraft', async () => {
       const raw = this.buildRawMessage(draft)
-      await this.gmail.users.messages.send({ userId: 'me', requestBody: { raw } })
-      return ok(undefined)
-    } catch (cause) {
-      logger.error(serializeApiError(cause), 'Gmail sendDraft error')
-      if (isAuthError(cause)) return err(new EmailAuthError())
-      return err(new ExternalServiceError('Gmail', String(cause)))
-    }
+      await this.gmail.users.messages.send({ userId: GMAIL_USER_ID, requestBody: { raw } })
+    })
   }
 
   async listMessages(opts: ListMessagesOptions): Promise<AppResult<EmailMessage[]>> {
-    try {
+    return this.wrapGmailCall('listMessages', async () => {
       const listRes = await this.gmail.users.messages.list({
-        userId: 'me',
+        userId: GMAIL_USER_ID,
         maxResults: opts.maxResults ?? 10,
         ...(opts.labelIds?.length ? { labelIds: opts.labelIds } : {}),
       })
       const ids = listRes.data.messages ?? []
       const messages = await Promise.all(ids.map((m) => this.fetchAndParse(m.id!)))
-      return ok(messages.filter((m): m is EmailMessage => m !== null))
-    } catch (cause) {
-      logger.error(serializeApiError(cause), 'Gmail listMessages error')
-      if (isAuthError(cause)) return err(new EmailAuthError())
-      return err(new ExternalServiceError('Gmail', String(cause)))
-    }
+      return messages.filter((m): m is EmailMessage => m !== null)
+    })
   }
 
   async searchMessages(query: string, maxResults = 10): Promise<AppResult<EmailMessage[]>> {
-    try {
+    return this.wrapGmailCall('searchMessages', async () => {
       const listRes = await this.gmail.users.messages.list({
-        userId: 'me',
+        userId: GMAIL_USER_ID,
         q: query,
         maxResults,
       })
       const ids = listRes.data.messages ?? []
       const messages = await Promise.all(ids.map((m) => this.fetchAndParse(m.id!)))
-      return ok(messages.filter((m): m is EmailMessage => m !== null))
-    } catch (cause) {
-      logger.error(serializeApiError(cause), 'Gmail searchMessages error')
-      if (isAuthError(cause)) return err(new EmailAuthError())
-      return err(new ExternalServiceError('Gmail', String(cause)))
-    }
+      return messages.filter((m): m is EmailMessage => m !== null)
+    })
   }
 
   async archiveMessage(messageId: string): Promise<AppResult<void>> {
-    try {
+    return this.wrapGmailCall('archiveMessage', async () => {
       await this.gmail.users.messages.modify({
-        userId: 'me',
+        userId: GMAIL_USER_ID,
         id: messageId,
         requestBody: { removeLabelIds: ['INBOX'] },
       })
-      return ok(undefined)
-    } catch (cause) {
-      logger.error(serializeApiError(cause), 'Gmail archiveMessage error')
-      if (isAuthError(cause)) return err(new EmailAuthError())
-      return err(new ExternalServiceError('Gmail', String(cause)))
-    }
+    })
   }
 
   async modifyLabels(opts: ModifyLabelsOptions): Promise<AppResult<void>> {
-    try {
+    return this.wrapGmailCall('modifyLabels', async () => {
       await this.gmail.users.messages.modify({
-        userId: 'me',
+        userId: GMAIL_USER_ID,
         id: opts.messageId,
         requestBody: {
           ...(opts.addLabelIds?.length ? { addLabelIds: opts.addLabelIds } : {}),
           ...(opts.removeLabelIds?.length ? { removeLabelIds: opts.removeLabelIds } : {}),
         },
       })
-      return ok(undefined)
-    } catch (cause) {
-      logger.error(serializeApiError(cause), 'Gmail modifyLabels error')
-      if (isAuthError(cause)) return err(new EmailAuthError())
-      return err(new ExternalServiceError('Gmail', String(cause)))
-    }
+    })
   }
 
   async markAsRead(messageId: string): Promise<AppResult<void>> {
-    try {
+    return this.wrapGmailCall('markAsRead', async () => {
       await this.gmail.users.messages.modify({
-        userId: 'me',
+        userId: GMAIL_USER_ID,
         id: messageId,
         requestBody: { removeLabelIds: ['UNREAD'] },
       })
-      return ok(undefined)
-    } catch (cause) {
-      logger.error(serializeApiError(cause), 'Gmail markAsRead error')
-      if (isAuthError(cause)) return err(new EmailAuthError())
-      return err(new ExternalServiceError('Gmail', String(cause)))
-    }
+    })
   }
 
   async trashMessage(messageId: string): Promise<AppResult<void>> {
-    try {
-      await this.gmail.users.messages.trash({ userId: 'me', id: messageId })
-      return ok(undefined)
-    } catch (cause) {
-      logger.error(serializeApiError(cause), 'Gmail trashMessage error')
-      if (isAuthError(cause)) return err(new EmailAuthError())
-      return err(new ExternalServiceError('Gmail', String(cause)))
-    }
+    return this.wrapGmailCall('trashMessage', async () => {
+      await this.gmail.users.messages.trash({ userId: GMAIL_USER_ID, id: messageId })
+    })
   }
 
   async getAttachment(
     messageId: string,
     attachmentId: string,
   ): Promise<AppResult<EmailAttachmentData>> {
-    try {
+    return this.wrapGmailCall('getAttachment', async () => {
       const msgRes = await this.gmail.users.messages.get({
-        userId: 'me',
+        userId: GMAIL_USER_ID,
         id: messageId,
         format: 'full',
       })
@@ -144,19 +112,26 @@ export class GmailGateway implements IEmailGateway {
       const meta = parsed?.attachments.find((a) => a.attachmentId === attachmentId)
 
       const attRes = await this.gmail.users.messages.attachments.get({
-        userId: 'me',
+        userId: GMAIL_USER_ID,
         messageId,
         id: attachmentId,
       })
 
-      return ok({
+      return {
         filename: meta?.filename ?? 'attachment',
         mimeType: meta?.mimeType ?? 'application/octet-stream',
         data: attRes.data.data ?? '',
         size: attRes.data.size ?? 0,
-      })
+      }
+    })
+  }
+
+  /** Wraps a Gmail API call with standardised error handling. */
+  private async wrapGmailCall<T>(operation: string, fn: () => Promise<T>): Promise<AppResult<T>> {
+    try {
+      return ok(await fn())
     } catch (cause) {
-      logger.error(serializeApiError(cause), 'Gmail getAttachment error')
+      logger.error(serializeApiError(cause), `Gmail ${operation} error`)
       if (isAuthError(cause)) return err(new EmailAuthError())
       return err(new ExternalServiceError('Gmail', String(cause)))
     }
@@ -165,7 +140,7 @@ export class GmailGateway implements IEmailGateway {
   private async fetchAndParse(id: string): Promise<EmailMessage | null> {
     try {
       const res = await this.gmail.users.messages.get({
-        userId: 'me',
+        userId: GMAIL_USER_ID,
         id,
         format: 'full',
       })

@@ -43,7 +43,9 @@ export function createTelegramBot(
   // createErrorMiddleware, but this catch is a final safety net.
   bot.catch((cause, ctx) => {
     logger.error({ cause, telegramId: ctx.from?.id }, 'Unhandled bot error')
-    ctx.reply(MESSAGES.ERROR_GENERIC).catch(() => {})
+    ctx.reply(MESSAGES.ERROR_GENERIC).catch((replyErr: unknown) => {
+      logger.warn({ replyErr, telegramId: ctx.from?.id }, 'Failed to send error reply to user')
+    })
   })
 
   bot.use(createErrorMiddleware())

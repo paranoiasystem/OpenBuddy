@@ -65,4 +65,37 @@ export const MESSAGES = {
   get ERROR_GENERIC_WORKFLOW(): string {
     return t('ERROR_GENERIC_WORKFLOW')
   },
+  get AUTH_CALLBACK_NOT_CONFIGURED(): string {
+    return t('AUTH_CALLBACK_NOT_CONFIGURED')
+  },
+  get AUTH_CALLBACK_CANCELLED_TITLE(): string {
+    return t('AUTH_CALLBACK_CANCELLED_TITLE')
+  },
+  get AUTH_CALLBACK_CANCELLED_BODY(): string {
+    return t('AUTH_CALLBACK_CANCELLED_BODY')
+  },
+  get AUTH_CALLBACK_INVALID_TITLE(): string {
+    return t('AUTH_CALLBACK_INVALID_TITLE')
+  },
+  get AUTH_CALLBACK_INVALID_BODY(): string {
+    return t('AUTH_CALLBACK_INVALID_BODY')
+  },
+  get AUTH_CALLBACK_ERROR_TITLE(): string {
+    return t('AUTH_CALLBACK_ERROR_TITLE')
+  },
+  get AUTH_CALLBACK_ERROR_BODY(): string {
+    return t('AUTH_CALLBACK_ERROR_BODY')
+  },
+  get AUTH_CALLBACK_EXPIRED_TITLE(): string {
+    return t('AUTH_CALLBACK_EXPIRED_TITLE')
+  },
+  get AUTH_CALLBACK_EXPIRED_BODY(): string {
+    return t('AUTH_CALLBACK_EXPIRED_BODY')
+  },
+  get AUTH_CALLBACK_SUCCESS_TITLE(): string {
+    return t('AUTH_CALLBACK_SUCCESS_TITLE')
+  },
+  get AUTH_CALLBACK_SUCCESS_BODY(): string {
+    return t('AUTH_CALLBACK_SUCCESS_BODY')
+  },
 }

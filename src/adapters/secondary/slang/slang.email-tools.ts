@@ -8,6 +8,13 @@ const NOT_CONFIGURED = JSON.stringify({
   message: 'Gmail not configured. Run /auth to authenticate.',
 })
 
+/** Coerces an unknown value into a string array (handles single strings and arrays). */
+function toStringArray(value: unknown): string[] | undefined {
+  if (Array.isArray(value)) return value.map(String)
+  if (typeof value === 'string') return [value]
+  return undefined
+}
+
 export function listEmails(gateway: IEmailGateway | undefined): SlangToolHandler {
   return async (args: Record<string, unknown>): Promise<string> => {
     if (!gateway) {
@@ -19,7 +26,7 @@ export function listEmails(gateway: IEmailGateway | undefined): SlangToolHandler
       })
     }
     const maxResults = typeof args['max_results'] === 'number' ? args['max_results'] : 10
-    const labelIds = Array.isArray(args['label_ids']) ? (args['label_ids'] as string[]) : undefined
+    const labelIds = toStringArray(args['label_ids'])
 
     const result = await gateway.listMessages({
       maxResults,
@@ -61,10 +68,10 @@ export function searchEmails(gateway: IEmailGateway | undefined): SlangToolHandl
 export function sendEmail(gateway: IEmailGateway | undefined): SlangToolHandler {
   return async (args: Record<string, unknown>): Promise<string> => {
     if (!gateway) return NOT_CONFIGURED
-    const to = Array.isArray(args['to']) ? (args['to'] as string[]) : [String(args['to'] ?? '')]
+    const to = toStringArray(args['to']) ?? [String(args['to'] ?? '')]
     const subject = String(args['subject'] ?? '')
     const body = String(args['body'] ?? '')
-    const cc = Array.isArray(args['cc']) ? (args['cc'] as string[]) : undefined
+    const cc = toStringArray(args['cc'])
 
     const result = await gateway.sendDraft({
       to,
@@ -101,12 +108,8 @@ export function modifyEmailLabels(gateway: IEmailGateway | undefined): SlangTool
     const messageId = String(args['message_id'] ?? '')
     if (!messageId) return JSON.stringify({ success: false, error: 'message_id is required.' })
 
-    const addLabelIds = Array.isArray(args['add_label_ids'])
-      ? (args['add_label_ids'] as string[])
-      : undefined
-    const removeLabelIds = Array.isArray(args['remove_label_ids'])
-      ? (args['remove_label_ids'] as string[])
-      : undefined
+    const addLabelIds = toStringArray(args['add_label_ids'])
+    const removeLabelIds = toStringArray(args['remove_label_ids'])
 
     const result = await gateway.modifyLabels({
       messageId,
