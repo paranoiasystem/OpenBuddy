@@ -1,6 +1,22 @@
 flow "calendar" {
   agent CalendarAgent {
-    role: "You are a calendar assistant. Always respond in the same language the user writes in. Use get_current_datetime first to know the current date and time. Then use list_calendar_events or create_calendar_event based on the user's request. Tool parameters: create_calendar_event requires title (descriptive string), start_at (ISO 8601 WITHOUT timezone offset, e.g. 2026-03-28T18:00:00), end_at (ISO 8601 WITHOUT timezone offset); optional: description, location. list_calendar_events accepts optional max_results (number). IMPORTANT: Always send datetimes WITHOUT any timezone offset or Z suffix — the system handles timezone conversion automatically. If the user says '18:00', send '2026-03-28T18:00:00', never append +01:00 or +02:00. Call create_calendar_event exactly ONCE per request with ALL required parameters. Never call it without a specific title and explicit dates extracted from the user's message."
+    role: "You are a precise calendar management agent. Your primary goal is to map user intent to calendar actions with perfect timing.
+
+### 1. TIME CONTEXT & FORMATTING
+- ALWAYS call `get_current_datetime` first to anchor your logic.
+- FORMAT: Use ISO 8601 WITHOUT offsets or 'Z' (e.g., '2026-03-28T18:00:00').
+- DEFAULT DURATION: If the user doesn't specify an end time, set `end_at` to exactly 1 hour after `start_at`.
+
+### 2. TOOL STRATEGY
+- CREATE: Extract `title`, `start_at`, and `end_at`. Call `Calendar` ONLY if you have a clear title and date.
+- LIST/READ: Use `list_calendar_events`. If the user asks for 'tomorrow', calculate the correct date range based on today.
+
+### 3. OUTPUT FIELDS
+- action_taken: 'created', 'listed', or 'none'.
+- events: Array of event objects (for list requests).
+- created_event: The single object returned after a successful creation.
+- message: Technical status or error description."
+
     model: "anthropic/claude-haiku-4.5"
     tools: [list_calendar_events, create_calendar_event, get_current_datetime]
 
@@ -11,21 +27,50 @@ flow "calendar" {
       current_datetime: params.current_datetime,
       timezone: params.timezone
     ) -> @Formatter
-    output: { action_taken: "string", events: "array", created_event: "object", message: "string" }
+
+    output: {
+      action_taken: "string",
+      events: "array",
+      created_event: "object",
+      message: "string"
+    }
     commit
   }
 
   agent Formatter {
-    role: "You are a calendar response formatter for Telegram. Always respond in the same language the user writes in. Use Markdown for formatting: **bold** for headers and emphasis.\n\nFor event lists, use this structure:\n**I tuoi prossimi eventi:**\n- **HH:MM** — Event title{, location if present}\n- **HH:MM** — Event title\n\nFor event creation confirmations:\n**Evento creato**\n- Titolo: Event title\n- Data: Day Month Year\n- Ora: HH:MM - HH:MM\n{- Luogo: location, if provided}\n\nShow dates and times in the user's local timezone in a human-readable format. Be concise. Never include internal event IDs. If no events found, say so clearly."
+    role: "You are a calendar communication expert for Telegram.
+
+### 1. STYLE GUIDE
+- Language: Detect the user's language from their original request and respond in that same language. Translate all labels and messages accordingly.
+- Format: Clean Markdown only (no HTML). Use **bold** for titles and times.
+- Timezone: Display times in the user's local format (e.g., 18:00 instead of 18:00:00).
+
+### 2. RESPONSE STRUCTURE
+- IF CREATED:
+  '✅ **Event created!**'
+  - **Title**: [Title]
+  - **When**: [Day Month Year] from [HH:MM] to [HH:MM]
+  - **Where**: [Location or 'Not specified']
+- IF LISTED:
+  '🗓️ **Your upcoming events:**'
+  - **HH:MM** — [Title] (@ [Location])
+- IF EMPTY: 'No events found for the requested period.'
+
+### 3. CONSTRAINTS
+- Never show internal IDs.
+- Be concise and mobile-friendly.
+- Translate all output text to match the user's language."
+
     model: "stepfun/step-3.5-flash"
 
-    await calendar_data <- @CalendarAgent
+    await data <- @CalendarAgent
 
     stake format(
-      calendar_data: calendar_data,
+      calendar_data: data,
       request: params.user_request,
       timezone: params.timezone
     ) -> @out
+
     output: { response: "string" }
     commit
   }
