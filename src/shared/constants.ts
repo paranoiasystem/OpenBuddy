@@ -56,3 +56,9 @@ export const GOOGLE_SCOPES = [
   'https://www.googleapis.com/auth/calendar',
   'https://www.googleapis.com/auth/gmail.modify',
 ] as const
+
+/** Default Gmail userId — 'me' refers to the authenticated user. */
+export const GMAIL_USER_ID = 'me'
+
+/** Default Google Calendar ID — 'primary' refers to the user's primary calendar. */
+export const GOOGLE_CALENDAR_ID = 'primary'

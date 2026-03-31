@@ -39,4 +39,19 @@ export const en: MessageKeys = {
   ERROR_EMAIL_WRITE_WORKFLOW: "I'm sorry, I couldn't prepare the draft. Please try again shortly.",
   ERROR_EMAIL_SEND_FAILED: "I couldn't send the email. Please try again shortly.",
   ERROR_GENERIC_WORKFLOW: "I'm sorry, I couldn't complete the request. Please try again shortly.",
+  AUTH_CALLBACK_NOT_CONFIGURED: '⚠️ Google credentials are not configured.',
+  AUTH_CALLBACK_CANCELLED_TITLE: 'Authentication cancelled',
+  AUTH_CALLBACK_CANCELLED_BODY:
+    '❌ You cancelled the authorization. Go back to Telegram and retry with /auth.',
+  AUTH_CALLBACK_INVALID_TITLE: 'Invalid request',
+  AUTH_CALLBACK_INVALID_BODY: '❌ Missing parameters in the Google response.',
+  AUTH_CALLBACK_ERROR_TITLE: 'Error',
+  AUTH_CALLBACK_ERROR_BODY:
+    '❌ Could not complete the authentication. Retry with /auth on Telegram.',
+  AUTH_CALLBACK_EXPIRED_TITLE: 'Session expired',
+  AUTH_CALLBACK_EXPIRED_BODY:
+    '⚠️ The authentication session has expired. Go back to Telegram and retry with /auth.',
+  AUTH_CALLBACK_SUCCESS_TITLE: 'Authentication complete ✅',
+  AUTH_CALLBACK_SUCCESS_BODY:
+    '✅ Google Calendar and Gmail are now connected to OpenBuddy! You can close this window and go back to Telegram.',
 }
