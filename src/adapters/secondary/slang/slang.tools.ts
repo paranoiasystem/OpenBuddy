@@ -31,7 +31,7 @@ type ToolDependencies = {
 export function buildToolRegistry(deps: ToolDependencies): SlangToolRegistry {
   return {
     get_current_datetime: getCurrentDatetime(deps.timezone),
-    list_calendar_events: listCalendarEvents(deps.calendarGateway),
+    list_calendar_events: listCalendarEvents(deps.calendarGateway, deps.timezone),
     create_calendar_event: createCalendarEvent(deps.calendarGateway, deps.timezone),
     list_emails: listEmails(deps.emailGateway),
     search_emails: searchEmails(deps.emailGateway),
@@ -62,7 +62,7 @@ function getCurrentDatetime(timezone: string) {
   }
 }
 
-function listCalendarEvents(gateway: ICalendarGateway | undefined) {
+function listCalendarEvents(gateway: ICalendarGateway | undefined, timezone: string) {
   return async (args: Record<string, unknown>): Promise<string> => {
     if (!gateway) {
       return JSON.stringify({ configured: false, message: 'Google Calendar not configured.' })
@@ -73,7 +73,12 @@ function listCalendarEvents(gateway: ICalendarGateway | undefined) {
       logger.warn({ error: result.error.code }, 'list_calendar_events tool error')
       return JSON.stringify({ configured: true, error: result.error.message, events: [] })
     }
-    return JSON.stringify({ configured: true, events: result.value })
+    const events = result.value.map((e) => ({
+      ...e,
+      startAt: toLocalISOString(e.startAt, timezone),
+      endAt: toLocalISOString(e.endAt, timezone),
+    }))
+    return JSON.stringify({ configured: true, events })
   }
 }
 
@@ -124,6 +129,17 @@ function createCalendarEvent(gateway: ICalendarGateway | undefined, timezone: st
 }
 
 // ─── Timezone helpers ─────────────────────────────────────────────────────────
+
+/**
+ * Formats a Date as a local ISO 8601 string with the correct timezone offset
+ * (e.g. "2026-04-01T15:00:00+02:00"), so LLM agents receive an unambiguous
+ * local time and don't need to perform DST-sensitive UTC conversions.
+ */
+function toLocalISOString(date: Date, timezone: string): string {
+  // 'sv-SE' locale produces "YYYY-MM-DD HH:MM:SS" — the closest to ISO 8601
+  const local = date.toLocaleString('sv-SE', { timeZone: timezone }).replace(' ', 'T')
+  return local + getTimezoneOffset(date, timezone)
+}
 
 /** Computes the UTC offset string (e.g. "+02:00") for a given date and IANA timezone. */
 export function getTimezoneOffset(date: Date, timezone: string): string {
