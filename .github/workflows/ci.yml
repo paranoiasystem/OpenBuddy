@@ -140,6 +140,8 @@ jobs:
         with:
           path: node_modules
           key: node-modules-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: Rebuild native addons
+        run: npm rebuild better-sqlite3
       - name: Run integration tests
         run: npm run test:integration
 
