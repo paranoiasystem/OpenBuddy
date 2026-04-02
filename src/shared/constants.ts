@@ -1,9 +1,3 @@
-/** Maximum number of retries for transient external service failures. */
-export const MAX_RETRIES = 3
-
-/** Default delay between retries in milliseconds. */
-export const RETRY_DELAY_MS = 1_000
-
 /** Maximum number of messages kept in a conversation context window. */
 export const MAX_CONVERSATION_HISTORY = 20
 
@@ -12,21 +6,6 @@ export const TRIAGE_CONTEXT_MESSAGES = 3
 
 /** Number of recent messages passed to non-triage workflows as conversation history. */
 export const WORKFLOW_CONTEXT_MESSAGES = 5
-
-/** OpenRouter model identifiers — never hardcode these in business logic. */
-export const OPENROUTER_MODELS = {
-  /** Ultra-cheap: triage, sender, formatter — mechanical/structured tasks. */
-  TRIAGE: 'inception/mercury-2',
-  FORMATTER: 'stepfun/step-3.5-flash',
-  /** Tool-calling agents + conversational (email, calendar, daily digests, chat). */
-  TOOL_AGENT: 'anthropic/claude-haiku-4.5',
-  CHAT: 'anthropic/claude-haiku-4.5',
-  COMPOSER: 'anthropic/claude-haiku-4.5',
-  // Legacy aliases kept for backwards compatibility
-  DEFAULT: 'anthropic/claude-haiku-4.5',
-  FAST: 'inception/mercury-2',
-  CAPABLE: 'anthropic/claude-haiku-4.5',
-} as const
 
 /** Approximate cost per million tokens for OpenRouter models (USD). */
 export const MODEL_COSTS_PER_MILLION_TOKENS: Record<string, { input: number; output: number }> = {

@@ -221,8 +221,24 @@ export class SlangOrchestrator implements IMessageOrchestrator {
       return ok(MESSAGES.ERROR_CHAT_WORKFLOW)
     }
     const raw = state.outputs[0]
-    const text = stripSlangMeta(typeof raw === 'string' ? raw : JSON.stringify(raw))
-    return ok(text || MESSAGES.ERROR_CHAT_WORKFLOW)
+    if (typeof raw === 'object' && raw !== null && 'response' in raw) {
+      const text = stripSlangMeta(String((raw as Record<string, unknown>)['response']))
+      return ok(text || MESSAGES.ERROR_CHAT_WORKFLOW)
+    }
+    if (typeof raw === 'string') {
+      const parsed = tryParseJson(raw)
+      if (
+        typeof parsed === 'object' &&
+        parsed !== null &&
+        'response' in (parsed as Record<string, unknown>)
+      ) {
+        const text = stripSlangMeta(String((parsed as Record<string, unknown>)['response']))
+        return ok(text || MESSAGES.ERROR_CHAT_WORKFLOW)
+      }
+      const text = stripSlangMeta(raw)
+      return ok(text || MESSAGES.ERROR_CHAT_WORKFLOW)
+    }
+    return ok(MESSAGES.ERROR_CHAT_WORKFLOW)
   }
 
   private async runDailyReport(

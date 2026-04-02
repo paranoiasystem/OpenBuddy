@@ -28,7 +28,7 @@ src/
 ├── application/     Use cases (orchestration layer)
 ├── adapters/
 │   ├── primary/     Telegram bot, HTTP server
-│   └── secondary/   OpenRouter, Google APIs, SQLite, SLANG, scheduler
+│   └── secondary/   Google APIs, SQLite, SLANG (OpenRouter via @riktar/slang), scheduler
 └── shared/          Config, logging, constants, utilities
 ```
 
@@ -89,17 +89,17 @@ All configuration is via environment variables, validated at startup with Zod.
 
 ## Model Strategy
 
-Each workflow agent uses a model chosen for its cost/quality trade-off. The strategy has three tiers:
+Each workflow agent uses a model chosen for its cost/quality trade-off:
 
 | Model | Input $/M | Output $/M | Used for |
 |---|---|---|---|
-| `stepfun/step-3.5-flash` | $0.10 | $0.30 | Triage, Email Sender, Email Summarizer, Calendar Formatter |
-| `moonshotai/kimi-k2.5` | $0.42 | $2.20 | Email Fetcher, Calendar Agent, Daily Report Digests, Email Drafter |
-| `anthropic/claude-haiku-4.5` | $1.00 | $5.00 | Chat Assistant, Daily Report Composer |
+| `inception/mercury-2` | $0.065 | $0.065 | Triage (intent classification) |
+| `stepfun/step-3.5-flash` | $0.10 | $0.30 | Email sender, email summarizer, calendar formatter |
+| `anthropic/claude-haiku-4.5` | $1.00 | $5.00 | Chat, email drafter, calendar agent, daily report |
 
-> Italian-facing conversational output always uses Haiku 4.5 (Anthropic, confirmed Italian quality).
-> Tool-calling agents use Kimi K2.5 (proven agentic performance at ~86% lower cost than Sonnet).
-> Purely mechanical tasks (JSON triage, formatting templates, tool dispatch) use Step 3.5 Flash (~97% lower cost than Sonnet).
+> Triage uses the cheapest possible model — it only needs to output a small JSON intent object.
+> Mechanical formatting tasks use Step 3.5 Flash.
+> All conversational and tool-calling agents use Haiku 4.5 for quality and reliability.
 
 You can override the default model via `OPENROUTER_DEFAULT_MODEL` in your `.env`.
 
@@ -110,6 +110,7 @@ You can override the default model via `OPENROUTER_DEFAULT_MODEL` in your `.env`
 | `/start` | Start the bot and show welcome message |
 | `/help` | List available commands and features |
 | `/auth` | Authenticate with Google (Calendar + Gmail) |
+| `/stats` | Show LLM usage statistics |
 
 Beyond commands, simply write a message and the AI will classify your intent and respond accordingly.
 

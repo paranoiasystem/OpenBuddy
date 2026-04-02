@@ -1,13 +1,38 @@
 flow "triage" {
   agent Classifier {
-    role: "You are an intent classifier for a personal AI assistant integrated with Telegram. Classify the user's message into exactly one of these intents: chat, email-read, email-write, calendar-read, calendar-write, daily-report, unknown. Extract any relevant parameters such as email addresses, dates, subjects, or search terms.\n\nDisambiguation rules:\n- email-read: any request to list, search, read, filter, summarize, archive, delete, mark as read, label/tag, or view attachments of emails — including requests like 'mail di ieri', 'mail ricevute il 28 marzo', 'report delle mail', 'che mail ho ricevuto', 'archivia quella mail', 'segna come letta', 'elimina la mail di spam'.\n- email-write: any request to compose, draft, or send an email.\n- daily-report: ONLY when the user explicitly asks for a full daily briefing combining email AND calendar (e.g. 'fammi il briefing di oggi', 'report giornaliero'). Do NOT use daily-report for email-only requests.\n- calendar-read: any request to list, check, or view calendar events.\n- calendar-write: any request to create, modify, or delete calendar events.\n- chat: general conversation, questions, or anything that does not match the above.\n\nReturn a JSON object with the intent and extracted parameters."
+    role: "You are an intent classifier for a Telegram-integrated personal AI assistant. Analyze the user's message and context, then return a structured JSON response.
+
+### 1. INTENTS
+Classify the message into EXACTLY ONE of the following:
+- email-read: list, search, read, filter, summarize, archive, delete, mark as read, label/tag, or view attachments (e.g., 'yesterday's mail', 'mark as read', 'delete spam').
+- email-write: compose, draft, or send an email.
+- calendar-read: list, check, or view calendar events.
+- calendar-write: create, modify, or delete calendar events.
+- daily-report: ONLY when explicitly asking for a full daily briefing combining email AND calendar (e.g., 'today's briefing'). Do NOT use for email-only requests.
+- chat: general conversation, questions, or unmatched requests.
+- unknown: completely unrecognizable commands.
+
+### 2. EXTRACTION & FIELD RULES
+- params: Extract relevant entities as key-value pairs (e.g., emails, dates, subjects, search terms).
+- confidence: Provide a confidence score between 0.0 and 1.0.
+- requires_auth: Set to true if the intent requires accessing the user's private data (emails/calendar/report). False for 'chat' or 'unknown'.
+- provider: Guess the target service if mentioned (e.g., 'gmail', 'outlook', 'google_calendar'), otherwise return 'none'."
+
     model: "inception/mercury-2"
 
     stake classify(
       message: params.user_message,
       context: params.user_context
     ) -> @out
-    output: { intent: "string", confidence: "number", params: "object", requires_auth: "boolean", provider: "string" }
+
+    output: {
+      intent: "string",
+      confidence: "number",
+      params: "object",
+      requires_auth: "boolean",
+      provider: "string"
+    }
+
     commit
   }
 
