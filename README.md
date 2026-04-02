@@ -191,4 +191,4 @@ npm run test:e2e         # End-to-end tests
 
 ## License
 
-This project is not yet licensed. A license will be added in a future release.
+This project is licensed under the [GNU General Public License v3.0](LICENSE).
