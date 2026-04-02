@@ -22,4 +22,15 @@ export type MessageKeys = {
   readonly ERROR_EMAIL_WRITE_WORKFLOW: string
   readonly ERROR_EMAIL_SEND_FAILED: string
   readonly ERROR_GENERIC_WORKFLOW: string
+  readonly AUTH_CALLBACK_NOT_CONFIGURED: string
+  readonly AUTH_CALLBACK_CANCELLED_TITLE: string
+  readonly AUTH_CALLBACK_CANCELLED_BODY: string
+  readonly AUTH_CALLBACK_INVALID_TITLE: string
+  readonly AUTH_CALLBACK_INVALID_BODY: string
+  readonly AUTH_CALLBACK_ERROR_TITLE: string
+  readonly AUTH_CALLBACK_ERROR_BODY: string
+  readonly AUTH_CALLBACK_EXPIRED_TITLE: string
+  readonly AUTH_CALLBACK_EXPIRED_BODY: string
+  readonly AUTH_CALLBACK_SUCCESS_TITLE: string
+  readonly AUTH_CALLBACK_SUCCESS_BODY: string
 }

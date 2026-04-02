@@ -15,4 +15,9 @@ export type MessageOrchestratorInput = {
   readonly userId: string
   /** Recent conversation history passed as context to the chat workflow. */
   readonly conversationHistory: ReadonlyArray<Message>
+  /**
+   * Optional callback invoked after triage, before a long-running workflow starts.
+   * Used to send an immediate acknowledgement to the user.
+   */
+  readonly onProgress?: () => Promise<void>
 }

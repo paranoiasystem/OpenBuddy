@@ -5,9 +5,12 @@ import { CalendarAuthError } from '@domain/errors/calendar-auth.error.js'
 import { ExternalServiceError } from '@domain/errors/external-service.error.js'
 import type { CalendarEvent, CreateCalendarEventInput } from '@domain/model/calendar-event.js'
 import type { ICalendarGateway } from '@domain/ports/output/i-calendar-gateway.js'
+import { GOOGLE_CALENDAR_ID } from '@shared/constants.js'
 import { logger } from '@shared/logger.js'
 import { err, ok } from '@shared/result.js'
 import type { AppResult } from '@shared/result.js'
+
+import { isAuthError, serializeApiError } from './google-api.utils.js'
 
 /** ICalendarGateway implementation backed by Google Calendar API v3. */
 export class GoogleCalendarGateway implements ICalendarGateway {
@@ -20,7 +23,7 @@ export class GoogleCalendarGateway implements ICalendarGateway {
   async createEvent(input: CreateCalendarEventInput): Promise<AppResult<CalendarEvent>> {
     try {
       const response = await this.calendar.events.insert({
-        calendarId: 'primary',
+        calendarId: GOOGLE_CALENDAR_ID,
         requestBody: {
           summary: input.title,
           description: input.description ?? null,
@@ -70,7 +73,7 @@ export class GoogleCalendarGateway implements ICalendarGateway {
   async listUpcomingEvents(maxResults: number): Promise<AppResult<ReadonlyArray<CalendarEvent>>> {
     try {
       const response = await this.calendar.events.list({
-        calendarId: 'primary',
+        calendarId: GOOGLE_CALENDAR_ID,
         timeMin: new Date().toISOString(),
         maxResults,
         singleEvents: true,
@@ -96,25 +99,5 @@ export class GoogleCalendarGateway implements ICalendarGateway {
       if (isAuthError(cause)) return err(new CalendarAuthError())
       return err(new ExternalServiceError('Google Calendar', String(cause)))
     }
-  }
-}
-
-function isAuthError(e: unknown): boolean {
-  if (typeof e !== 'object' || e === null) return false
-  const obj = e as Record<string, unknown>
-  const code = obj['code']
-  const status = (obj['response'] as Record<string, unknown> | undefined)?.['status']
-  return code === 401 || code === 403 || status === 401 || status === 403
-}
-
-/** Extract human-readable fields from Google API (GaxiosError) for structured logging. */
-function serializeApiError(cause: unknown): Record<string, unknown> {
-  if (typeof cause !== 'object' || cause === null) return { cause: String(cause) }
-  const obj = cause as Record<string, unknown>
-  const response = obj['response'] as Record<string, unknown> | undefined
-  return {
-    message: obj['message'] ?? String(cause),
-    status: response?.['status'] ?? obj['code'],
-    data: response?.['data'],
   }
 }

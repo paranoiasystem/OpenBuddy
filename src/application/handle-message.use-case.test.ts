@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 
+import { ValidationError } from '@domain/errors/validation.error.js'
 import { FakeConversationRepository } from '@shared/__tests__/helpers/fake-conversation-repository.js'
 import { FakeMessageOrchestrator } from '@shared/__tests__/helpers/fake-message-orchestrator.js'
 import { FakeUserRepository } from '@shared/__tests__/helpers/fake-user-repository.js'
@@ -50,6 +51,47 @@ describe('HandleMessageUseCase', () => {
     if (result.isOk()) {
       expect(result.value.reply).toBe('Welcome back!')
     }
+  })
+
+  it('should return ValidationError when text is empty', async () => {
+    const result = await useCase.execute({
+      telegramId: 123,
+      username: 'marco',
+      firstName: 'Marco',
+      text: '   ',
+    })
+
+    expect(result.isErr()).toBe(true)
+    if (result.isErr()) {
+      expect(result.error).toBeInstanceOf(ValidationError)
+    }
+  })
+
+  it('should return ValidationError when text exceeds 4000 characters', async () => {
+    const result = await useCase.execute({
+      telegramId: 123,
+      username: 'marco',
+      firstName: 'Marco',
+      text: 'a'.repeat(4001),
+    })
+
+    expect(result.isErr()).toBe(true)
+    if (result.isErr()) {
+      expect(result.error).toBeInstanceOf(ValidationError)
+    }
+  })
+
+  it('should trim whitespace from text before processing', async () => {
+    orchestrator.setResponse('Ok!')
+
+    const result = await useCase.execute({
+      telegramId: 123,
+      username: 'marco',
+      firstName: 'Marco',
+      text: '  Hello  ',
+    })
+
+    expect(result.isOk()).toBe(true)
   })
 
   it('should propagate orchestrator errors', async () => {

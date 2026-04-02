@@ -40,4 +40,19 @@ export const it: MessageKeys = {
   ERROR_EMAIL_SEND_FAILED: 'Non sono riuscito a inviare la mail. Riprova tra poco.',
   ERROR_GENERIC_WORKFLOW:
     'Mi dispiace, non sono riuscito a completare la richiesta. Riprova tra poco.',
+  AUTH_CALLBACK_NOT_CONFIGURED: '⚠️ Le credenziali Google non sono configurate.',
+  AUTH_CALLBACK_CANCELLED_TITLE: 'Autenticazione annullata',
+  AUTH_CALLBACK_CANCELLED_BODY:
+    "❌ Hai annullato l'autorizzazione. Torna su Telegram e riprova con /auth.",
+  AUTH_CALLBACK_INVALID_TITLE: 'Richiesta non valida',
+  AUTH_CALLBACK_INVALID_BODY: '❌ Parametri mancanti nella risposta di Google.',
+  AUTH_CALLBACK_ERROR_TITLE: 'Errore',
+  AUTH_CALLBACK_ERROR_BODY:
+    "❌ Impossibile completare l'autenticazione. Riprova con /auth su Telegram.",
+  AUTH_CALLBACK_EXPIRED_TITLE: 'Sessione scaduta',
+  AUTH_CALLBACK_EXPIRED_BODY:
+    '⚠️ La sessione di autenticazione è scaduta. Torna su Telegram e riprova con /auth.',
+  AUTH_CALLBACK_SUCCESS_TITLE: 'Autenticazione completata ✅',
+  AUTH_CALLBACK_SUCCESS_BODY:
+    '✅ Google Calendar e Gmail sono ora collegati a OpenBuddy! Puoi chiudere questa finestra e tornare su Telegram.',
 }
