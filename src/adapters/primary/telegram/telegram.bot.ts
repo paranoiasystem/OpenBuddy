@@ -4,6 +4,8 @@ import { message } from 'telegraf/filters'
 import type { GoogleAuthManager } from '@adapters/secondary/google/google-auth.js'
 import type { IHandleMessage } from '@domain/ports/input/i-handle-message.js'
 import type { StatsService } from '@domain/service/stats.service.js'
+import { logger } from '@shared/logger.js'
+import { MESSAGES } from '@shared/messages.js'
 
 import type { BotContext } from './bot-context.type.js'
 import { createAuthHandler } from './handlers/auth.handler.js'
@@ -35,6 +37,16 @@ export function createTelegramBot(
   adapters: Adapters,
 ): Telegraf<BotContext> {
   const bot = new Telegraf<BotContext>(config.token)
+
+  // Prevent Telegraf's default error handler from crashing the process via
+  // setImmediate(() => { throw err }). All errors are already handled by
+  // createErrorMiddleware, but this catch is a final safety net.
+  bot.catch((cause, ctx) => {
+    logger.error({ cause, telegramId: ctx.from?.id }, 'Unhandled bot error')
+    ctx.reply(MESSAGES.ERROR_GENERIC).catch((replyErr: unknown) => {
+      logger.warn({ replyErr, telegramId: ctx.from?.id }, 'Failed to send error reply to user')
+    })
+  })
 
   bot.use(createErrorMiddleware())
   bot.use(createAuthMiddleware(config.allowedUserIds))

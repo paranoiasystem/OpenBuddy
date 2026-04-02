@@ -7,6 +7,7 @@ import type {
   IMessageOrchestrator,
   MessageOrchestratorInput,
 } from '@domain/ports/output/i-message-orchestrator.js'
+import { TRIAGE_CONTEXT_MESSAGES, WORKFLOW_CONTEXT_MESSAGES } from '@shared/constants.js'
 import { logger } from '@shared/logger.js'
 import { MESSAGES } from '@shared/messages.js'
 import { err, ok } from '@shared/result.js'
@@ -98,8 +99,13 @@ export class SlangOrchestrator implements IMessageOrchestrator {
         }
       }
 
-      // Step 3: Route to the appropriate workflow
-      return this.routeToWorkflow({ runFlow, adapter }, triage.intent, triage.params, opts)
+      // Step 3: Notify the user if a long-running workflow is about to start
+      if (triage.intent !== 'chat' && triage.intent !== 'unknown') {
+        await opts.onProgress?.()
+      }
+
+      // Step 4: Route to the appropriate workflow
+      return await this.routeToWorkflow({ runFlow, adapter }, triage.intent, triage.params, opts)
     } catch (cause) {
       logger.error({ cause }, 'SlangOrchestrator fatal error')
       return err(new ExternalServiceError('Slang', String(cause)))
@@ -114,7 +120,7 @@ export class SlangOrchestrator implements IMessageOrchestrator {
   ): Promise<AppResult<TriageResult>> {
     const source = await this.loadWorkflow('triage.slang')
     const historyText = opts.conversationHistory
-      .slice(-5)
+      .slice(-TRIAGE_CONTEXT_MESSAGES)
       .map((m) => `${m.role}: ${stripSlangMeta(m.content)}`)
       .join('\n')
 
@@ -159,7 +165,7 @@ export class SlangOrchestrator implements IMessageOrchestrator {
     opts: MessageOrchestratorInput,
   ): Promise<AppResult<string>> {
     const historyText = opts.conversationHistory
-      .slice(-10)
+      .slice(-WORKFLOW_CONTEXT_MESSAGES)
       .map((m) => `${m.role}: ${stripSlangMeta(m.content)}`)
       .join('\n')
 
@@ -205,7 +211,7 @@ export class SlangOrchestrator implements IMessageOrchestrator {
       {
         userId: opts.userId,
         workflowType: 'chat',
-        model: 'anthropic/claude-sonnet-4.6',
+        model: 'anthropic/claude-haiku-4.5',
         inputLength: opts.userMessage.length + historyText.length,
       },
     )
@@ -215,7 +221,24 @@ export class SlangOrchestrator implements IMessageOrchestrator {
       return ok(MESSAGES.ERROR_CHAT_WORKFLOW)
     }
     const raw = state.outputs[0]
-    return ok(stripSlangMeta(typeof raw === 'string' ? raw : JSON.stringify(raw)))
+    if (typeof raw === 'object' && raw !== null && 'response' in raw) {
+      const text = stripSlangMeta(String((raw as Record<string, unknown>)['response']))
+      return ok(text || MESSAGES.ERROR_CHAT_WORKFLOW)
+    }
+    if (typeof raw === 'string') {
+      const parsed = tryParseJson(raw)
+      if (
+        typeof parsed === 'object' &&
+        parsed !== null &&
+        'response' in (parsed as Record<string, unknown>)
+      ) {
+        const text = stripSlangMeta(String((parsed as Record<string, unknown>)['response']))
+        return ok(text || MESSAGES.ERROR_CHAT_WORKFLOW)
+      }
+      const text = stripSlangMeta(raw)
+      return ok(text || MESSAGES.ERROR_CHAT_WORKFLOW)
+    }
+    return ok(MESSAGES.ERROR_CHAT_WORKFLOW)
   }
 
   private async runDailyReport(
@@ -248,7 +271,7 @@ export class SlangOrchestrator implements IMessageOrchestrator {
       {
         userId: opts.userId,
         workflowType: 'daily-report',
-        model: 'anthropic/claude-sonnet-4.6',
+        model: 'anthropic/claude-haiku-4.5',
         inputLength: opts.userMessage.length,
       },
     )
@@ -279,7 +302,7 @@ export class SlangOrchestrator implements IMessageOrchestrator {
       {
         userId: opts.userId,
         workflowType: 'email-write',
-        model: 'anthropic/claude-sonnet-4.6',
+        model: 'anthropic/claude-haiku-4.5',
         inputLength: opts.userMessage.length + historyText.length,
       },
     )
@@ -332,7 +355,7 @@ export class SlangOrchestrator implements IMessageOrchestrator {
       {
         userId: opts.userId,
         workflowType: 'email-read',
-        model: 'anthropic/claude-sonnet-4.6',
+        model: 'anthropic/claude-haiku-4.5',
         inputLength: opts.userMessage.length,
       },
     )
@@ -363,7 +386,7 @@ export class SlangOrchestrator implements IMessageOrchestrator {
       {
         userId: opts.userId,
         workflowType: 'calendar',
-        model: 'anthropic/claude-sonnet-4.6',
+        model: 'anthropic/claude-haiku-4.5',
         inputLength: opts.userMessage.length,
       },
     )
@@ -441,7 +464,8 @@ export class SlangOrchestrator implements IMessageOrchestrator {
 
     // Already a parsed object (future-proof if slang starts parsing outputs)
     if (typeof raw === 'object' && raw !== null && key in raw) {
-      return ok(stripSlangMeta(String((raw as Record<string, unknown>)[key])))
+      const text = stripSlangMeta(String((raw as Record<string, unknown>)[key]))
+      return ok(text || MESSAGES.ERROR_GENERIC_WORKFLOW)
     }
 
     // Raw string: try to parse JSON and extract the key
@@ -452,10 +476,12 @@ export class SlangOrchestrator implements IMessageOrchestrator {
         parsed !== null &&
         key in (parsed as Record<string, unknown>)
       ) {
-        return ok(stripSlangMeta(String((parsed as Record<string, unknown>)[key])))
+        const text = stripSlangMeta(String((parsed as Record<string, unknown>)[key]))
+        return ok(text || MESSAGES.ERROR_GENERIC_WORKFLOW)
       }
       // No JSON found: return text with slang metadata stripped
-      return ok(stripSlangMeta(raw))
+      const text = stripSlangMeta(raw)
+      return ok(text || MESSAGES.ERROR_GENERIC_WORKFLOW)
     }
 
     return ok(JSON.stringify(raw))

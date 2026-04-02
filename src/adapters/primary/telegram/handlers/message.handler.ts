@@ -25,6 +25,9 @@ export function createMessageHandler(handleMessage: IHandleMessage) {
       username: ctx.from?.username,
       firstName: ctx.from?.first_name ?? 'User',
       text,
+      onProgress: async () => {
+        await ctx.reply(MESSAGES.PROCESSING)
+      },
     })
 
     if (result.isErr()) {
@@ -33,6 +36,11 @@ export function createMessageHandler(handleMessage: IHandleMessage) {
       return
     }
 
-    await ctx.reply(formatForTelegramHtml(result.value.reply), { parse_mode: 'HTML' })
+    const replyText = formatForTelegramHtml(result.value.reply)
+    if (!replyText) {
+      await ctx.reply(MESSAGES.ERROR_GENERIC)
+      return
+    }
+    await ctx.reply(replyText, { parse_mode: 'HTML' })
   }
 }

@@ -10,6 +10,8 @@ export type ProcessMessageInput = {
   readonly telegramId: number
   readonly firstName: string
   readonly text: string
+  /** Optional callback invoked after triage, before a long-running workflow starts. */
+  readonly onProgress?: () => Promise<void>
 }
 
 export type ProcessMessageOutput = {
@@ -60,6 +62,7 @@ export class MessageHandlerService {
       userName: input.firstName,
       userId: user.id,
       conversationHistory: history,
+      ...(input.onProgress && { onProgress: input.onProgress }),
     })
     if (orchestratorResult.isErr()) return err(orchestratorResult.error)
 

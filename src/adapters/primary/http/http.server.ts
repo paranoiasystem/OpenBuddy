@@ -54,7 +54,7 @@ async function handleRequest(
       sendHtml(
         res,
         503,
-        buildHtmlPage('Non configurato', '⚠️ Le credenziali Google non sono configurate.'),
+        buildHtmlPage(MESSAGES.AUTH_NOT_CONFIGURED, MESSAGES.AUTH_CALLBACK_NOT_CONFIGURED),
       )
       return
     }
@@ -85,10 +85,7 @@ async function handleGoogleCallback(
     sendHtml(
       res,
       400,
-      buildHtmlPage(
-        'Autenticazione annullata',
-        "❌ Hai annullato l'autorizzazione. Torna su Telegram e riprova con /auth.",
-      ),
+      buildHtmlPage(MESSAGES.AUTH_CALLBACK_CANCELLED_TITLE, MESSAGES.AUTH_CALLBACK_CANCELLED_BODY),
     )
     return
   }
@@ -97,7 +94,7 @@ async function handleGoogleCallback(
     sendHtml(
       res,
       400,
-      buildHtmlPage('Richiesta non valida', '❌ Parametri mancanti nella risposta di Google.'),
+      buildHtmlPage(MESSAGES.AUTH_CALLBACK_INVALID_TITLE, MESSAGES.AUTH_CALLBACK_INVALID_BODY),
     )
     return
   }
@@ -110,10 +107,7 @@ async function handleGoogleCallback(
     sendHtml(
       res,
       500,
-      buildHtmlPage(
-        'Errore',
-        "❌ Impossibile completare l'autenticazione. Riprova con /auth su Telegram.",
-      ),
+      buildHtmlPage(MESSAGES.AUTH_CALLBACK_ERROR_TITLE, MESSAGES.AUTH_CALLBACK_ERROR_BODY),
     )
     return
   }
@@ -123,10 +117,7 @@ async function handleGoogleCallback(
     sendHtml(
       res,
       400,
-      buildHtmlPage(
-        'Sessione scaduta',
-        '⚠️ La sessione di autenticazione è scaduta. Torna su Telegram e riprova con /auth.',
-      ),
+      buildHtmlPage(MESSAGES.AUTH_CALLBACK_EXPIRED_TITLE, MESSAGES.AUTH_CALLBACK_EXPIRED_BODY),
     )
     return
   }
@@ -144,10 +135,7 @@ async function handleGoogleCallback(
   sendHtml(
     res,
     200,
-    buildHtmlPage(
-      'Autenticazione completata ✅',
-      '✅ Google Calendar e Gmail sono ora collegati a OpenBuddy! Puoi chiudere questa finestra e tornare su Telegram.',
-    ),
+    buildHtmlPage(MESSAGES.AUTH_CALLBACK_SUCCESS_TITLE, MESSAGES.AUTH_CALLBACK_SUCCESS_BODY),
   )
 }
 

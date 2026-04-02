@@ -28,7 +28,7 @@ src/
 ├── application/     Use cases (orchestration layer)
 ├── adapters/
 │   ├── primary/     Telegram bot, HTTP server
-│   └── secondary/   OpenRouter, Google APIs, SQLite, SLANG, scheduler
+│   └── secondary/   Google APIs, SQLite, SLANG (OpenRouter via @riktar/slang), scheduler
 └── shared/          Config, logging, constants, utilities
 ```
 
@@ -76,7 +76,8 @@ All configuration is via environment variables, validated at startup with Zod.
 | `ALLOWED_USER_IDS` | Yes | — | Comma-separated Telegram user IDs |
 | `OPENROUTER_API_KEY` | Yes | — | OpenRouter API key |
 | `OPENROUTER_BASE_URL` | No | `https://openrouter.ai/api/v1` | OpenRouter API base URL |
-| `OPENROUTER_DEFAULT_MODEL` | No | `anthropic/claude-3.5-sonnet` | Default LLM model |
+| `OPENROUTER_DEFAULT_MODEL` | No | `anthropic/claude-haiku-4.5` | Default LLM model |
+| `LOCALE` | No | `it` | UI language (`it` or `en`) |
 | `GOOGLE_CLIENT_ID` | No | — | Google OAuth2 client ID |
 | `GOOGLE_CLIENT_SECRET` | No | — | Google OAuth2 client secret |
 | `GOOGLE_REDIRECT_URI` | No | `http://localhost:3000/auth/google/callback` | OAuth2 redirect URI |
@@ -86,6 +87,22 @@ All configuration is via environment variables, validated at startup with Zod.
 | `PORT` | No | `3000` | HTTP server port (health check + OAuth callback) |
 | `TIMEZONE` | No | `Europe/Rome` | IANA timezone for date/time formatting |
 
+## Model Strategy
+
+Each workflow agent uses a model chosen for its cost/quality trade-off:
+
+| Model | Input $/M | Output $/M | Used for |
+|---|---|---|---|
+| `inception/mercury-2` | $0.065 | $0.065 | Triage (intent classification) |
+| `stepfun/step-3.5-flash` | $0.10 | $0.30 | Email sender, email summarizer, calendar formatter |
+| `anthropic/claude-haiku-4.5` | $1.00 | $5.00 | Chat, email drafter, calendar agent, daily report |
+
+> Triage uses the cheapest possible model — it only needs to output a small JSON intent object.
+> Mechanical formatting tasks use Step 3.5 Flash.
+> All conversational and tool-calling agents use Haiku 4.5 for quality and reliability.
+
+You can override the default model via `OPENROUTER_DEFAULT_MODEL` in your `.env`.
+
 ## Telegram Commands
 
 | Command | Description |
@@ -93,6 +110,7 @@ All configuration is via environment variables, validated at startup with Zod.
 | `/start` | Start the bot and show welcome message |
 | `/help` | List available commands and features |
 | `/auth` | Authenticate with Google (Calendar + Gmail) |
+| `/stats` | Show LLM usage statistics |
 
 Beyond commands, simply write a message and the AI will classify your intent and respond accordingly.
 
@@ -103,7 +121,7 @@ Beyond commands, simply write a message and the AI will classify your intent and
 | **triage** | Every message | Classifies intent and routes to the right workflow |
 | **chat** | General conversation | Free-form AI chat with conversation context |
 | **email-read** | "What emails do I have?" | Fetches and summarizes emails |
-| **email-write** | "Write an email to..." | Multi-agent drafting: Drafter → Reviewer → Sender |
+| **email-write** | "Write an email to..." | Multi-agent drafting: Drafter → Sender |
 | **calendar** | "What's on my calendar?" | Lists events or creates new ones |
 | **daily-report** | "Give me a briefing" | Combines email digest + calendar into a daily summary |
 
@@ -144,7 +162,7 @@ npm run test:e2e         # End-to-end tests
 | Runtime | Node.js >= 22, TypeScript (strict mode) |
 | Bot framework | Telegraf v4 |
 | Agent orchestration | @riktar/slang |
-| LLM provider | OpenRouter (OpenAI-compatible API) |
+| LLM provider | OpenRouter (OpenAI-compatible API) — multi-model strategy |
 | Database | TypeORM + SQLite (better-sqlite3) |
 | Config validation | Zod |
 | Error handling | neverthrow (Result types) |
@@ -173,4 +191,4 @@ npm run test:e2e         # End-to-end tests
 
 ## License
 
-This project is not yet licensed. A license will be added in a future release.
+This project is licensed under the [GNU General Public License v3.0](LICENSE).

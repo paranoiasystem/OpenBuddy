@@ -10,6 +10,8 @@ export type HandleMessageInput = {
   readonly username: string | undefined
   readonly firstName: string
   readonly text: string
+  /** Optional callback invoked after triage, before a long-running workflow starts. */
+  readonly onProgress?: () => Promise<void>
 }
 
 export type HandleMessageOutput = {
