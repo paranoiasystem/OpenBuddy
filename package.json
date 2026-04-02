@@ -1,6 +1,6 @@
 {
   "name": "openbuddy",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.1",
   "description": "Telegram personal assistant bot with AI orchestration",
   "type": "module",
   "engines": {

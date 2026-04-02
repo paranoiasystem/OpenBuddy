@@ -5,6 +5,7 @@ import { DomainError } from './domain-error.js'
 import { EmailAuthError } from './email-auth.error.js'
 import { ExternalServiceError } from './external-service.error.js'
 import { UserNotFoundError } from './user-not-found.error.js'
+import { ValidationError } from './validation.error.js'
 
 describe('Domain errors', () => {
   it('should create CalendarAuthError with correct code', () => {
@@ -36,5 +37,12 @@ describe('Domain errors', () => {
     expect(error).toBeInstanceOf(DomainError)
     expect(error.code).toBe('USER_NOT_FOUND')
     expect(error.message).toContain('12345')
+  })
+
+  it('should create ValidationError with correct code and message', () => {
+    const error = new ValidationError('text too long')
+    expect(error).toBeInstanceOf(DomainError)
+    expect(error.code).toBe('VALIDATION_ERROR')
+    expect(error.message).toBe('text too long')
   })
 })

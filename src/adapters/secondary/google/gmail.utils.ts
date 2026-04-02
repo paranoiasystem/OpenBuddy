@@ -30,7 +30,7 @@ export function parseMessage(raw: gmail_v1.Schema$Message): EmailMessage | null 
 }
 
 /** Extracts plain-text body from a Gmail message payload. */
-export function extractBody(payload: gmail_v1.Schema$MessagePart | undefined): string {
+function extractBody(payload: gmail_v1.Schema$MessagePart | undefined): string {
   if (!payload) return ''
 
   if (payload.mimeType === 'text/plain' && payload.body?.data) {

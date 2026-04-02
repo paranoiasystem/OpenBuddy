@@ -59,17 +59,16 @@ src/
 ├── domain/            ← Pure business logic. ZERO framework imports. ZERO I/O.
 │   ├── model/         ← Entities and Value Objects (User, Conversation, Message, CalendarEvent, EmailDraft, ScheduledTask)
 │   ├── ports/
-│   │   ├── input/     ← Use case contracts (IHandleMessage, IManageCalendar, IManageSchedule)
+│   │   ├── input/     ← Use case contracts (IHandleMessage, IManageSchedule)
 │   │   └── output/    ← Adapter contracts (IUserRepository, ILlmGateway, ICalendarGateway, IEmailGateway, IMessageOrchestrator, etc.)
-│   ├── service/       ← Domain services (MessageHandlerService, ScheduleService, CalendarService)
-│   └── errors/        ← Typed error classes extending DomainError
-├── application/       ← Use cases (HandleMessageUseCase, Create/List/DeleteScheduledTask, calendar/email use cases)
+│   ├── service/       ← Domain services (MessageHandlerService, ScheduleService, CalendarService, StatsService)
+│   └── errors/        ← Typed error classes extending DomainError (incl. ValidationError)
+├── application/       ← Use cases (HandleMessageUseCase only — all other logic handled by SLANG tools)
 ├── adapters/
 │   ├── primary/
-│   │   ├── telegram/  ← Telegraf bot: handlers/ (start, help, auth, message) + middleware/ (auth allowlist, error)
+│   │   ├── telegram/  ← Telegraf bot: handlers/ (start, help, auth, message, stats) + middleware/ (auth allowlist, error)
 │   │   └── http/      ← Minimal Node http server: GET /health, GET /auth/google/callback
 │   └── secondary/
-│       ├── openrouter/ ← ILlmGateway implementation (POST to OpenRouter API)
 │       ├── google/     ← OAuth2 auth manager + ICalendarGateway + IEmailGateway
 │       ├── persistence/← TypeORM DataSource, entities, repositories (implements I*Repository ports)
 │       ├── scheduler/  ← IManageSchedule via node-cron
@@ -78,8 +77,9 @@ src/
     ├── config.ts       ← Zod-validated env vars (required: TELEGRAM_BOT_TOKEN, OPENROUTER_API_KEY; optional: GOOGLE_*)
     ├── logger.ts       ← Pino singleton (pretty in dev, JSON in prod)
     ├── result.ts       ← Re-exports neverthrow; defines AppResult<T> = Result<T, DomainError>
-    ├── constants.ts    ← MAX_RETRIES, MAX_CONVERSATION_HISTORY, OPENROUTER_MODELS, GOOGLE_SCOPES
+    ├── constants.ts    ← MAX_CONVERSATION_HISTORY, TRIAGE_CONTEXT_MESSAGES, GOOGLE_SCOPES, estimateCost
     ├── messages.ts     ← All user-facing Telegram strings (Italian)
+    ├── telegram-html.ts← Markdown → Telegram HTML converter (used by message handler)
     └── __tests__/helpers/ ← Hand-written fakes for unit tests (FakeUserRepository, FakeConversationRepository, etc.)
 ```
 
